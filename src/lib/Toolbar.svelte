@@ -151,7 +151,7 @@
 <style lang="scss">
     .toolbar {
         position: fixed;
-        width: 44px;
+        width: 36px;
         background: #ffffff;
         padding: 6px;
         border-radius: 10px;
@@ -171,8 +171,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
         background-color: transparent;
         border: none;
         border-radius: 10px;
@@ -184,8 +184,8 @@
         }
 
         .icon {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             object-fit: contain;
         }
     }
