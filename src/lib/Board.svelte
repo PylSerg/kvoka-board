@@ -6,18 +6,18 @@
     let ctx;
 
     // Стани малювання ліній
-    let isDrawing = false;
-    let currentLineId = null; // Запам'ятовуємо тільки ID поточної лінії
+    let isDrawing = $state(false);
+    let currentLineId = $state(null); // Запам'ятовуємо тільки ID поточної лінії
 
     // Стани для виділення та перетягування
-    let isMoving = false; // Переміщення ліній
-    let isPanning = false; // Переміщення всієї дошки
-    let isSelectingArea = false; // Малювання рамки виділення
+    let isMoving = $state(false); // Переміщення ліній
+    let isPanning = $state(false); // Переміщення всієї дошки
+    let isSelectingArea = $state(false); // Малювання рамки виділення
 
-    let startX = 0;
-    let startY = 0;
-    let currentX = 0;
-    let currentY = 0;
+    let startX = $state(0);
+    let startY = $state(0);
+    let currentX = $state(0);
+    let currentY = $state(0);
 
     onMount(() => {
         ctx = canvas.getContext("2d");
