@@ -73,6 +73,38 @@
         redraw();
     });
 
+    function drawLine(ctx, line) {
+        if (!line.points || line.points.length === 0) return;
+
+        ctx.beginPath();
+        ctx.lineWidth = line.width;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        const p = line.points;
+        ctx.moveTo(p[0].x, p[0].y);
+
+        if (p.length === 1) {
+            ctx.lineTo(p[0].x, p[0].y);
+        } else if (p.length === 2) {
+            ctx.lineTo(p[1].x, p[1].y);
+        } else {
+            for (let i = 1; i < p.length - 2; i++) {
+                const xc = (p[i].x + p[i + 1].x) / 2;
+                const yc = (p[i].y + p[i + 1].y) / 2;
+                ctx.quadraticCurveTo(p[i].x, p[i].y, xc, yc);
+            }
+            // For the last 2 points
+            ctx.quadraticCurveTo(
+                p[p.length - 2].x,
+                p[p.length - 2].y,
+                p[p.length - 1].x,
+                p[p.length - 1].y
+            );
+        }
+        ctx.stroke();
+    }
+
     function redraw() {
         if (!ctx) return;
 
@@ -100,13 +132,6 @@
             offscreenCtx.scale(boardData.zoom, boardData.zoom);
 
             boardData.lines.forEach((line) => {
-                if (!line.points || line.points.length === 0) return;
-
-                offscreenCtx.beginPath();
-                offscreenCtx.lineWidth = line.width;
-                offscreenCtx.lineCap = "round";
-                offscreenCtx.lineJoin = "round";
-
                 const isEraser = line.tool === "eraser" || line.color === "#ffffff";
 
                 if (isEraser) {
@@ -124,16 +149,7 @@
                     offscreenCtx.shadowBlur = 0;
                 }
 
-                offscreenCtx.moveTo(line.points[0].x, line.points[0].y);
-
-                if (line.points.length === 1) {
-                    offscreenCtx.lineTo(line.points[0].x, line.points[0].y);
-                } else {
-                    for (let i = 1; i < line.points.length; i++) {
-                        offscreenCtx.lineTo(line.points[i].x, line.points[i].y);
-                    }
-                }
-                offscreenCtx.stroke();
+                drawLine(offscreenCtx, line);
             });
 
             offscreenCtx.restore();
@@ -173,19 +189,12 @@
             ctx.globalAlpha = 0.5;
 
             copiedLines.forEach((line) => {
-                ctx.beginPath();
-                ctx.lineWidth = line.width;
-                ctx.lineCap = "round";
-                ctx.lineJoin = "round";
                 ctx.strokeStyle = line.color;
-
-                const firstPoint = line.points[0];
-                ctx.moveTo(firstPoint.x + dx, firstPoint.y + dy);
-
-                for (let i = 1; i < line.points.length; i++) {
-                    ctx.lineTo(line.points[i].x + dx, line.points[i].y + dy);
-                }
-                ctx.stroke();
+                const offsetLine = {
+                    ...line,
+                    points: line.points.map(p => ({ x: p.x + dx, y: p.y + dy }))
+                };
+                drawLine(ctx, offsetLine);
             });
             ctx.restore();
         }
