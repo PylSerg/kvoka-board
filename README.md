@@ -15,7 +15,7 @@ To recreate this project with the same configuration:
 
 ```sh
 # recreate this project
-npx sv@0.15.2 create --template minimal --no-types --install npm kvovka-board
+npx sv@0.15.2 create --template minimal --no-types --install npm kvoka-board
 ```
 
 ## Developing
