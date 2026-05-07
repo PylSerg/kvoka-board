@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { brushSettings, boardData, saveState } from "$lib";
     import SelectionMenu from "./SelectionMenu.svelte";
 
@@ -71,6 +71,25 @@
         boardData.offsetX;
         boardData.offsetY;
         redraw();
+    });
+
+    // Синхронізація налаштувань пензля з виділеною лінією
+    $effect(() => {
+        const ids = boardData.selectedLineIds;
+        const tool = brushSettings.tool;
+        if (ids.length === 1 && tool === 'select') {
+            const selectedLine = boardData.lines.find(l => l.id === ids[0]);
+            if (selectedLine) {
+                untrack(() => {
+                    if (brushSettings.color !== selectedLine.color) {
+                        brushSettings.color = selectedLine.color;
+                    }
+                    if (brushSettings.width !== selectedLine.width) {
+                        brushSettings.width = selectedLine.width;
+                    }
+                });
+            }
+        }
     });
 
     function drawLine(ctx, line) {

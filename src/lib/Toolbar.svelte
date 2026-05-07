@@ -1,5 +1,5 @@
 <script>
-    import { brushSettings, boardData, undo, redo, clearAll } from "$lib";
+    import { brushSettings, boardData, undo, redo, clearAll, saveState } from "$lib";
     import orientationVerticalIcon from "$lib/assets/orientation-vertical.png";
     import orientationHorizontalIcon from "$lib/assets/orientation-horizontal.png";
     import moveIcon from "$lib/assets/hand-cursor.png";
@@ -65,6 +65,31 @@
         boardData.offsetX = 0;
         boardData.offsetY = 0;
     }
+
+    function applySettingsToSelected() {
+        if (boardData.selectedLineIds.length > 0) {
+            boardData.lines = boardData.lines.map((line) => {
+                if (boardData.selectedLineIds.includes(line.id)) {
+                    return {
+                        ...line,
+                        color: brushSettings.color,
+                        width: brushSettings.width,
+                    };
+                }
+                return line;
+            });
+        }
+    }
+
+    function handleInput() {
+        applySettingsToSelected();
+    }
+
+    function handleStartEdit() {
+        if (boardData.selectedLineIds.length > 0) {
+            saveState();
+        }
+    }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -80,11 +105,15 @@
         class="orientation-btn"
     >
         <img
-            src={isVertical ? orientationHorizontalIcon : orientationVerticalIcon}
+            src={isVertical
+                ? orientationHorizontalIcon
+                : orientationVerticalIcon}
             alt="Змінити орієнтацію панелі"
             class="icon"
         />
     </button>
+
+    <hr />
 
     <button
         class={brushSettings.tool === "move" ? "active" : ""}
@@ -126,12 +155,21 @@
         <input
             type="color"
             bind:value={brushSettings.color}
+            oninput={handleInput}
+            onmousedown={handleStartEdit}
             disabled={brushSettings.tool === "eraser"}
         />
     </label>
 
     <label title="Товщина">
-        <input type="range" min="1" max="50" bind:value={brushSettings.width} />
+        <input
+            type="range"
+            min="1"
+            max="50"
+            bind:value={brushSettings.width}
+            oninput={handleInput}
+            onmousedown={handleStartEdit}
+        />
     </label>
 
     <hr />
