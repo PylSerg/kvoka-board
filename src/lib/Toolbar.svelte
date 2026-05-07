@@ -1,8 +1,12 @@
 <script>
-    import { brushSettings, undo, redo, clearAll } from "$lib"; // Імпортуємо методи історії
+    import { brushSettings, boardData, undo, redo, clearAll } from "$lib";
+    import moveIcon from "$lib/assets/hand-cursor.png";
     import pencilIcon from "$lib/assets/pencil.png";
     import eraserIcon from "$lib/assets/eraser.png";
     import selectionIcon from "$lib/assets/selection.png";
+    import zoomInIcon from "$lib/assets/zoom-in.png";
+    import zoomOutIcon from "$lib/assets/zoom-out.png";
+    import zoom100Icon from "$lib/assets/zoom-100.png";
     import undoIcon from "$lib/assets/undo.png";
     import redoIcon from "$lib/assets/redo.png";
     import clearIcon from "$lib/assets/broom.png";
@@ -39,6 +43,20 @@
         window.removeEventListener("mousemove", handleDrag);
         window.removeEventListener("mouseup", stopDrag);
     }
+
+    function zoomIn() {
+        boardData.zoom = Math.min(10, boardData.zoom + 0.1);
+    }
+
+    function zoomOut() {
+        boardData.zoom = Math.max(0.1, boardData.zoom - 0.1);
+    }
+
+    function resetZoom() {
+        boardData.zoom = 1;
+        boardData.offsetX = 0;
+        boardData.offsetY = 0;
+    }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -48,12 +66,22 @@
     style="left: {posX}px; top: {posY}px;"
 >
     <button
+        class={brushSettings.tool === "move" ? "active" : ""}
+        onclick={() => (brushSettings.tool = "move")}
+        title="Переміщення"
+    >
+        <img src={moveIcon} alt="Переміщення" class="icon" />
+    </button>
+
+    <button
         class={brushSettings.tool === "select" ? "active" : ""}
         onclick={() => (brushSettings.tool = "select")}
         title="Виділення"
     >
         <img src={selectionIcon} alt="Виділення" class="icon" />
     </button>
+
+    <hr />
 
     <button
         class={brushSettings.tool === "brush" ? "active" : ""}
@@ -84,6 +112,20 @@
     <label title="Товщина">
         <input type="range" min="1" max="50" bind:value={brushSettings.width} />
     </label>
+
+    <hr />
+
+    <button onclick={zoomIn} title="Збільшити" class="action-btn">
+        <img src={zoomInIcon} alt="Збільшити" class="icon" />
+    </button>
+
+    <button onclick={zoomOut} title="Зменшити" class="action-btn">
+        <img src={zoomOutIcon} alt="Зменшити" class="icon" />
+    </button>
+
+    <button onclick={resetZoom} title="100%" class="action-btn">
+        <img src={zoom100Icon} alt="100%" class="icon" />
+    </button>
 
     <hr />
 
@@ -138,7 +180,7 @@
         transition: background-color 0.2s;
 
         &:hover {
-            background-color: #f0f0f0;
+            background-color: #c7dff9;
         }
 
         .icon {

@@ -11,6 +11,7 @@
 
     // Стани для виділення та перетягування
     let isMoving = false; // Переміщення ліній
+    let isPanning = false; // Переміщення всієї дошки
     let isSelectingArea = false; // Малювання рамки виділення
 
     let startX = 0;
@@ -22,27 +23,56 @@
         ctx = canvas.getContext("2d");
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
-        return () => window.removeEventListener("resize", resizeCanvas);
+        canvas.addEventListener("wheel", handleWheel, { passive: false });
+        return () => {
+            window.removeEventListener("resize", resizeCanvas);
+            canvas.removeEventListener("wheel", handleWheel);
+        };
     });
+
+    // Конвертація координат
+    function toCanvas(x, y) {
+        return {
+            x: (x - boardData.offsetX) / boardData.zoom,
+            y: (y - boardData.offsetY) / boardData.zoom,
+        };
+    }
+
+    function toScreen(x, y) {
+        return {
+            x: x * boardData.zoom + boardData.offsetX,
+            y: y * boardData.zoom + boardData.offsetY,
+        };
+    }
 
     $effect(() => {
         // Слідкуємо за змінами в даних дошки, щоб автоматично перемальовувати канвас
-        // Це особливо важливо для Undo/Redo, які змінюють стор ззовні компонента
         boardData.lines;
         boardData.selectedLineIds;
+        boardData.zoom;
+        boardData.offsetX;
+        boardData.offsetY;
         redraw();
     });
 
     function redraw() {
         if (!ctx) return;
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, 10000, 10000);
 
         // 1. Малюємо білий фон
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, 10000, 10000);
 
-        // 2. Малюємо всі лінії
+        // 2. Малюємо сітку
+        drawGrid();
+
+        // 3. Застосовуємо трансформації для ліній
+        ctx.save();
+        ctx.translate(boardData.offsetX, boardData.offsetY);
+        ctx.scale(boardData.zoom, boardData.zoom);
+
+        // 4. Малюємо всі лінії
         boardData.lines.forEach((line) => {
             if (!line.points || line.points.length === 0) return;
 
@@ -51,11 +81,10 @@
             ctx.lineCap = "round";
             ctx.lineJoin = "round";
 
-            // Перевіряємо, чи входить ID лінії в масив виділених
             if (boardData.selectedLineIds.includes(line.id)) {
-                ctx.strokeStyle = "#ff3e00"; // Червоний неон для виділених
+                ctx.strokeStyle = "#ff3e00";
                 ctx.shadowColor = "rgba(255, 62, 0, 0.6)";
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 10 / boardData.zoom; // Тінь теж має масштабуватися
             } else {
                 ctx.strokeStyle = line.color;
                 ctx.shadowBlur = 0;
@@ -73,9 +102,9 @@
             ctx.stroke();
         });
 
-        ctx.shadowBlur = 0; // Скидаємо тінь
+        ctx.restore(); // Скидаємо трансформації
 
-        // 3. Малюємо пунктирну рамку виділення
+        // 5. Малюємо пунктирну рамку виділення (вона малюється в екранних координатах для зручності)
         if (isSelectingArea) {
             ctx.beginPath();
             ctx.setLineDash([6, 4]);
@@ -88,8 +117,34 @@
 
             ctx.fillRect(startX, startY, width, height);
             ctx.strokeRect(startX, startY, width, height);
-            ctx.setLineDash([]); // Вертаємо суцільну лінію
+            ctx.setLineDash([]);
         }
+    }
+
+    function drawGrid() {
+        const step = 40 * boardData.zoom;
+
+        // Математика для "нескінченної" сітки
+        const startXGrid = boardData.offsetX % step;
+        const startYGrid = boardData.offsetY % step;
+
+        ctx.beginPath();
+        ctx.strokeStyle = "#f0f0f0"; // Світло-сірий для ліній клітинки
+        ctx.lineWidth = 1;
+
+        // Вертикальні лінії
+        for (let x = startXGrid; x < canvas.width; x += step) {
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+        }
+
+        // Горизонтальні лінії
+        for (let y = startYGrid; y < canvas.height; y += step) {
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+        }
+
+        ctx.stroke();
     }
 
     function resizeCanvas() {
@@ -98,12 +153,39 @@
         redraw();
     }
 
+    function handleWheel(e) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Координати миші на канвасі ДО зуму
+        const beforeZoom = toCanvas(mouseX, mouseY);
+
+        const zoomSpeed = 0.001;
+        let newZoom = boardData.zoom - e.deltaY * zoomSpeed;
+        newZoom = Math.max(0.1, Math.min(10, newZoom));
+
+        boardData.zoom = newZoom;
+
+        // Координати миші на канвасі ПІСЛЯ зуму (мають збігатися з beforeZoom)
+        // Новий offset = mouse - beforeZoom * zoom
+        boardData.offsetX = mouseX - beforeZoom.x * boardData.zoom;
+        boardData.offsetY = mouseY - beforeZoom.y * boardData.zoom;
+
+        redraw();
+    }
+
     // Перевірка, чи потрапила лінія в зону прямокутника
     function isLineInSelectArea(x1, y1, x2, y2, line) {
-        const minX = Math.min(x1, x2);
-        const maxX = Math.max(x1, x2);
-        const minY = Math.min(y1, y2);
-        const maxY = Math.max(y1, y2);
+        // Конвертуємо рамку виділення (яка в екранних координатах) в координати канвасу
+        const p1 = toCanvas(x1, y1);
+        const p2 = toCanvas(x2, y2);
+
+        const minX = Math.min(p1.x, p2.x);
+        const maxX = Math.max(p1.x, p2.x);
+        const minY = Math.min(p1.y, p2.y);
+        const maxY = Math.max(p1.y, p2.y);
 
         // Якщо хоча б одна точка лінії лежить всередині рамки — лінія вважається виділеною
         return line.points.some(
@@ -113,7 +195,8 @@
 
     // Математика кліку мишкою по лінії (для поодинокого виділення)
     function isPointNearLine(px, py, line) {
-        const threshold = line.width + 10;
+        // px, py вже мають бути в координатах канвасу
+        const threshold = (line.width + 10) / boardData.zoom; // Поріг теж залежить від зуму
         for (let i = 0; i < line.points.length - 1; i++) {
             const p1 = line.points[i];
             const p2 = line.points[i + 1];
@@ -143,47 +226,58 @@
 
     function handleMouseDown(e) {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
 
-        startX = x;
-        startY = y;
+        // Конвертуємо в координати канвасу
+        const canvasPos = toCanvas(screenX, screenY);
+
+        startX = screenX; // Для рамки виділення та панорамування використовуємо екранні
+        startY = screenY;
+
+        if (e.button === 1 || e.button === 2 || brushSettings.tool === "move") {
+            // Середня, права кнопка або інструмент "move" — панорамування
+            isPanning = true;
+            return;
+        }
 
         saveState();
 
         if (brushSettings.tool === "select") {
-            // Перевіряємо, чи клікнули ми по якійсь лінії, що вже виділена або просто лежить на дошці
+            // Перевіряємо, чи клікнули ми по якійсь лінії
             let clickedLine = null;
             for (let i = boardData.lines.length - 1; i >= 0; i--) {
-                if (isPointNearLine(x, y, boardData.lines[i])) {
+                if (
+                    isPointNearLine(
+                        canvasPos.x,
+                        canvasPos.y,
+                        boardData.lines[i],
+                    )
+                ) {
                     clickedLine = boardData.lines[i];
                     break;
                 }
             }
 
             if (clickedLine) {
-                // Якщо ця лінія ще не була виділена — робимо її єдиною виділеною
                 if (!boardData.selectedLineIds.includes(clickedLine.id)) {
                     boardData.selectedLineIds = [clickedLine.id];
                 }
                 isMoving = true;
             } else {
-                // Клікнули в порожнечу — знімаємо виділення і починаємо малювати рамку
                 boardData.selectedLineIds = [];
                 isSelectingArea = true;
-                currentX = x;
-                currentY = y;
+                currentX = screenX;
+                currentY = screenY;
             }
             redraw();
         } else {
-            // Режим малювання
             isDrawing = true;
-            boardData.selectedLineIds = []; // Скидаємо виділення
+            boardData.selectedLineIds = [];
 
             const id = Date.now() + Math.random();
             currentLineId = id;
 
-            // Додаємо лінію безпосередньо в реактивний масив стору
             boardData.lines = [
                 ...boardData.lines,
                 {
@@ -193,7 +287,7 @@
                             ? "#ffffff"
                             : brushSettings.color,
                     width: brushSettings.width,
-                    points: [{ x, y }],
+                    points: [{ x: canvasPos.x, y: canvasPos.y }],
                 },
             ];
             redraw();
@@ -202,27 +296,38 @@
 
     function handleMouseMove(e) {
         const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const canvasPos = toCanvas(screenX, screenY);
 
-        if (isDrawing && currentLineId) {
-            // Оновлюємо точки лінії прямо всередині реактивного масиву стору
+        if (isPanning) {
+            boardData.offsetX += screenX - startX;
+            boardData.offsetY += screenY - startY;
+            startX = screenX;
+            startY = screenY;
+            redraw();
+        } else if (isDrawing && currentLineId) {
             boardData.lines = boardData.lines.map((line) => {
                 if (line.id === currentLineId) {
-                    return { ...line, points: [...line.points, { x, y }] };
+                    return {
+                        ...line,
+                        points: [
+                            ...line.points,
+                            { x: canvasPos.x, y: canvasPos.y },
+                        ],
+                    };
                 }
                 return line;
             });
             redraw();
         } else if (isSelectingArea) {
-            currentX = x;
-            currentY = y;
+            currentX = screenX;
+            currentY = screenY;
             redraw();
         } else if (isMoving && boardData.selectedLineIds.length > 0) {
-            const dx = x - startX;
-            const dy = y - startY;
+            const dx = (screenX - startX) / boardData.zoom;
+            const dy = (screenY - startY) / boardData.zoom;
 
-            // Зсуваємо координати ОДРАЗУ ДЛЯ ВСІХ виділених ліній
             boardData.lines = boardData.lines.map((line) => {
                 if (boardData.selectedLineIds.includes(line.id)) {
                     return {
@@ -236,24 +341,23 @@
                 return line;
             });
 
-            startX = x;
-            startY = y;
+            startX = screenX;
+            startY = screenY;
             redraw();
         }
     }
 
     function handleMouseUp(e) {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
         if (isSelectingArea) {
-            isSelectingArea = false;
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
 
             let newlySelected = [];
-            // Проходимо по ВСІХ лініях і збираємо ті, що потрапили в рамку
             boardData.lines.forEach((line) => {
-                if (isLineInSelectArea(startX, startY, x, y, line)) {
+                if (
+                    isLineInSelectArea(startX, startY, screenX, screenY, line)
+                ) {
                     newlySelected.push(line.id);
                 }
             });
@@ -264,22 +368,46 @@
 
         isDrawing = false;
         isMoving = false;
+        isPanning = false;
+        isSelectingArea = false;
         currentLineId = null;
     }
 </script>
 
 <canvas
     bind:this={canvas}
+    class={brushSettings.tool}
+    class:panning={isPanning}
     onmousedown={handleMouseDown}
     onmousemove={handleMouseMove}
     onmouseup={handleMouseUp}
     onmouseleave={handleMouseUp}
+    oncontextmenu={(e) => e.preventDefault()}
 ></canvas>
 
 <style>
     canvas {
         background: #ffffff;
-        cursor: crosshair;
         display: block;
+    }
+
+    canvas.brush {
+        cursor: crosshair;
+    }
+
+    canvas.eraser {
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect x="0" y="0" width="20" height="20" fill="white" stroke="black" stroke-width="1"/></svg>'), auto;
+    }
+
+    canvas.select {
+        cursor: default;
+    }
+
+    canvas.move {
+        cursor: grab;
+    }
+
+    canvas.panning {
+        cursor: grabbing !important;
     }
 </style>
