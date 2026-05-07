@@ -19,6 +19,14 @@
     let currentX = $state(0);
     let currentY = $state(0);
 
+    // Координати миші для кастомного курсора
+    let mouseX = $state(-100);
+    let mouseY = $state(-100);
+    let showCursor = $state(false);
+
+    let offscreenCanvas;
+    let offscreenCtx;
+
     onMount(() => {
         ctx = canvas.getContext("2d");
         resizeCanvas();
@@ -72,37 +80,60 @@
         ctx.translate(boardData.offsetX, boardData.offsetY);
         ctx.scale(boardData.zoom, boardData.zoom);
 
-        // 4. Малюємо всі лінії
-        boardData.lines.forEach((line) => {
-            if (!line.points || line.points.length === 0) return;
+        // 4. Малюємо всі лінії на офскрін канвасі для підтримки прозорої гумки
+        if (offscreenCtx) {
+            offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
+            
+            // Застосовуємо ті ж трансформації до офскрін канвасу
+            offscreenCtx.save();
+            offscreenCtx.translate(boardData.offsetX, boardData.offsetY);
+            offscreenCtx.scale(boardData.zoom, boardData.zoom);
 
-            ctx.beginPath();
-            ctx.lineWidth = line.width;
-            ctx.lineCap = "round";
-            ctx.lineJoin = "round";
+            boardData.lines.forEach((line) => {
+                if (!line.points || line.points.length === 0) return;
 
-            if (boardData.selectedLineIds.includes(line.id)) {
-                ctx.strokeStyle = "#ff3e00";
-                ctx.shadowColor = "rgba(255, 62, 0, 0.6)";
-                ctx.shadowBlur = 10 / boardData.zoom; // Тінь теж має масштабуватися
-            } else {
-                ctx.strokeStyle = line.color;
-                ctx.shadowBlur = 0;
-            }
+                offscreenCtx.beginPath();
+                offscreenCtx.lineWidth = line.width;
+                offscreenCtx.lineCap = "round";
+                offscreenCtx.lineJoin = "round";
 
-            ctx.moveTo(line.points[0].x, line.points[0].y);
+                const isEraser = line.tool === "eraser" || line.color === "#ffffff";
 
-            if (line.points.length === 1) {
-                ctx.lineTo(line.points[0].x, line.points[0].y);
-            } else {
-                for (let i = 1; i < line.points.length; i++) {
-                    ctx.lineTo(line.points[i].x, line.points[i].y);
+                if (isEraser) {
+                    offscreenCtx.globalCompositeOperation = "destination-out";
+                } else {
+                    offscreenCtx.globalCompositeOperation = "source-over";
                 }
-            }
-            ctx.stroke();
-        });
 
-        ctx.restore(); // Скидаємо трансформації
+                if (boardData.selectedLineIds.includes(line.id)) {
+                    offscreenCtx.strokeStyle = "#ff3e00";
+                    offscreenCtx.shadowColor = "rgba(255, 62, 0, 0.6)";
+                    offscreenCtx.shadowBlur = 10 / boardData.zoom;
+                } else {
+                    offscreenCtx.strokeStyle = line.color;
+                    offscreenCtx.shadowBlur = 0;
+                }
+
+                offscreenCtx.moveTo(line.points[0].x, line.points[0].y);
+
+                if (line.points.length === 1) {
+                    offscreenCtx.lineTo(line.points[0].x, line.points[0].y);
+                } else {
+                    for (let i = 1; i < line.points.length; i++) {
+                        offscreenCtx.lineTo(line.points[i].x, line.points[i].y);
+                    }
+                }
+                offscreenCtx.stroke();
+            });
+
+            offscreenCtx.restore();
+            
+            // Малюємо результат з офскрін канвасу на основний
+            ctx.restore(); // Скидаємо трансформації перед drawImage, бо офскрін вже відрендерений з ними
+            ctx.drawImage(offscreenCanvas, 0, 0);
+        } else {
+            ctx.restore();
+        }
 
         // 5. Малюємо пунктирну рамку виділення (вона малюється в екранних координатах для зручності)
         if (isSelectingArea) {
@@ -150,6 +181,14 @@
     function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+
+        if (!offscreenCanvas) {
+            offscreenCanvas = document.createElement("canvas");
+        }
+        offscreenCanvas.width = canvas.width;
+        offscreenCanvas.height = canvas.height;
+        offscreenCtx = offscreenCanvas.getContext("2d");
+
         redraw();
     }
 
@@ -234,6 +273,8 @@
 
         startX = screenX; // Для рамки виділення та панорамування використовуємо екранні
         startY = screenY;
+        mouseX = e.clientX;
+        mouseY = e.clientY;
 
         if (e.button === 1 || e.button === 2 || brushSettings.tool === "move") {
             // Середня, права кнопка або інструмент "move" — панорамування
@@ -282,11 +323,9 @@
                 ...boardData.lines,
                 {
                     id: id,
-                    color:
-                        brushSettings.tool === "eraser"
-                            ? "#ffffff"
-                            : brushSettings.color,
+                    color: brushSettings.color,
                     width: brushSettings.width,
+                    tool: brushSettings.tool,
                     points: [{ x: canvasPos.x, y: canvasPos.y }],
                 },
             ];
@@ -299,6 +338,10 @@
         const screenX = e.clientX - rect.left;
         const screenY = e.clientY - rect.top;
         const canvasPos = toCanvas(screenX, screenY);
+
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        showCursor = true;
 
         if (isPanning) {
             boardData.offsetX += screenX - startX;
@@ -381,9 +424,35 @@
     onmousedown={handleMouseDown}
     onmousemove={handleMouseMove}
     onmouseup={handleMouseUp}
-    onmouseleave={handleMouseUp}
+    onmouseenter={(e) => {
+        showCursor = true;
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+    }}
+    onmouseleave={(e) => {
+        handleMouseUp(e);
+        showCursor = false;
+    }}
     oncontextmenu={(e) => e.preventDefault()}
 ></canvas>
+
+{#if showCursor && (brushSettings.tool === "brush" || brushSettings.tool === "eraser")}
+    <div
+        class="custom-cursor"
+        style="
+            left: {mouseX}px; 
+            top: {mouseY}px; 
+            width: {brushSettings.width * boardData.zoom}px; 
+            height: {brushSettings.width * boardData.zoom}px;
+            background-color: {brushSettings.tool === 'eraser'
+            ? 'rgba(255, 255, 255, 0.3)'
+            : brushSettings.color};
+            border: 1px solid {brushSettings.tool === 'eraser'
+            ? '#000'
+            : 'rgba(0,0,0,0.2)'};
+        "
+    ></div>
+{/if}
 
 <style>
     canvas {
@@ -391,12 +460,9 @@
         display: block;
     }
 
-    canvas.brush {
-        cursor: crosshair;
-    }
-
+    canvas.brush,
     canvas.eraser {
-        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect x="0" y="0" width="20" height="20" fill="white" stroke="black" stroke-width="1"/></svg>'), auto;
+        cursor: none;
     }
 
     canvas.select {
@@ -409,5 +475,13 @@
 
     canvas.panning {
         cursor: grabbing !important;
+    }
+
+    .custom-cursor {
+        position: fixed;
+        pointer-events: none;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
     }
 </style>
