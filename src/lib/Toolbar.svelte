@@ -3,6 +3,9 @@
     import pencilIcon from "$lib/assets/pencil.png";
     import eraserIcon from "$lib/assets/eraser.png";
     import selectionIcon from "$lib/assets/selection.png";
+    import undoIcon from "$lib/assets/undo.png";
+    import redoIcon from "$lib/assets/redo.png";
+    import clearIcon from "$lib/assets/broom.png";
 
     let posX = $state(10);
     let posY = $state(10);
@@ -84,20 +87,22 @@
 
     <hr />
 
-    <button onclick={undo} title="Назад (Undo)" class="action-btn">
-        <span style="font-size: 18px;">⤺</span>
+    <button onclick={undo} title="Назад" class="action-btn">
+        <img src={undoIcon} alt="Назад" class="icon" />
     </button>
 
-    <button onclick={redo} title="Вперед (Redo)" class="action-btn">
-        <span style="font-size: 18px;">⤻</span>
+    <button onclick={redo} title="Вперед" class="action-btn">
+        <img src={redoIcon} alt="Вперед" class="icon" />
     </button>
+
+    <hr />
 
     <button
         onclick={clearAll}
         title="Очистити дошку"
         class="action-btn delete-btn"
     >
-        <span style="font-size: 18px;">🗑</span>
+        <img src={clearIcon} alt="Очистити дошку" class="icon" />
     </button>
 </div>
 
