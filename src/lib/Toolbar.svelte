@@ -29,6 +29,7 @@
             return;
         }
         isDragging = true;
+        e.preventDefault(); // Запобігаємо виділенню тексту
         startX = e.clientX - posX;
         startY = e.clientY - posY;
         window.addEventListener("mousemove", handleDrag);
@@ -183,6 +184,7 @@
         gap: 8px;
         z-index: 1000;
         cursor: grab;
+        user-select: none;
 
         &:active {
             cursor: grabbing;
