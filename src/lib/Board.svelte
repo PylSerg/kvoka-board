@@ -1,6 +1,7 @@
 <script>
     import { onMount } from "svelte";
     import { brushSettings, boardData, saveState } from "$lib";
+    import SelectionMenu from "./SelectionMenu.svelte";
 
     let canvas;
     let ctx;
@@ -23,6 +24,15 @@
     let mouseX = $state(-100);
     let mouseY = $state(-100);
     let showCursor = $state(false);
+
+    // Стани для копіювання
+    let isCopying = $state(false);
+    let copiedLines = $state([]);
+    let copyOrigin = $state({ x: 0, y: 0 });
+
+    // Позиція меню
+    let showMenu = $state(false);
+    let menuPos = $state({ x: 0, y: 0 });
 
     let offscreenCanvas;
     let offscreenCtx;
@@ -149,6 +159,35 @@
             ctx.fillRect(startX, startY, width, height);
             ctx.strokeRect(startX, startY, width, height);
             ctx.setLineDash([]);
+        }
+
+        // 6. Малюємо прев'ю скопійованих об'єктів
+        if (isCopying && copiedLines.length > 0) {
+            const canvasPos = toCanvas(mouseX, mouseY);
+            const dx = canvasPos.x - copyOrigin.x;
+            const dy = canvasPos.y - copyOrigin.y;
+
+            ctx.save();
+            ctx.translate(boardData.offsetX, boardData.offsetY);
+            ctx.scale(boardData.zoom, boardData.zoom);
+            ctx.globalAlpha = 0.5;
+
+            copiedLines.forEach((line) => {
+                ctx.beginPath();
+                ctx.lineWidth = line.width;
+                ctx.lineCap = "round";
+                ctx.lineJoin = "round";
+                ctx.strokeStyle = line.color;
+
+                const firstPoint = line.points[0];
+                ctx.moveTo(firstPoint.x + dx, firstPoint.y + dy);
+
+                for (let i = 1; i < line.points.length; i++) {
+                    ctx.lineTo(line.points[i].x + dx, line.points[i].y + dy);
+                }
+                ctx.stroke();
+            });
+            ctx.restore();
         }
     }
 
@@ -282,6 +321,12 @@
             return;
         }
 
+        if (isCopying) {
+            finalizeCopy();
+            return;
+        }
+
+        showMenu = false; // Ховаємо меню при будь-якому новому кліку
         saveState();
 
         if (brushSettings.tool === "select") {
@@ -387,6 +432,8 @@
             startX = screenX;
             startY = screenY;
             redraw();
+        } else if (isCopying) {
+            redraw();
         }
     }
 
@@ -409,11 +456,76 @@
             redraw();
         }
 
+        const wasSelecting = isSelectingArea;
+        const wasMoving = isMoving;
+
         isDrawing = false;
         isMoving = false;
         isPanning = false;
         isSelectingArea = false;
         currentLineId = null;
+
+        // Показуємо меню тільки якщо ми завершили виділення (рамкою або кліком)
+        // і при цьому НЕ переміщували об'єкти (щоб меню не "стрибало" після кожного перетягування)
+        if (boardData.selectedLineIds.length > 0 && !isCopying && (wasSelecting || (wasMoving && !showMenu))) {
+            showMenu = true;
+            menuPos = { x: e.clientX, y: e.clientY };
+        }
+    }
+
+    function handleDelete() {
+        if (boardData.selectedLineIds.length === 0) return;
+        saveState();
+        boardData.lines = boardData.lines.filter(
+            (line) => !boardData.selectedLineIds.includes(line.id),
+        );
+        boardData.selectedLineIds = [];
+        showMenu = false;
+        redraw();
+    }
+
+    function handleCopy() {
+        if (boardData.selectedLineIds.length === 0) return;
+
+        const selectedLines = boardData.lines.filter((line) =>
+            boardData.selectedLineIds.includes(line.id),
+        );
+
+        // Створюємо глибокі копії
+        copiedLines = selectedLines.map((line) => ({
+            ...line,
+            id: Date.now() + Math.random(),
+            points: line.points.map((p) => ({ ...p })),
+        }));
+
+        const canvasPos = toCanvas(mouseX, mouseY);
+        copyOrigin = { x: canvasPos.x, y: canvasPos.y };
+        isCopying = true;
+        showMenu = false;
+        boardData.selectedLineIds = []; // Знімаємо виділення з оригіналів
+        redraw();
+    }
+
+    function finalizeCopy() {
+        if (!isCopying) return;
+
+        const canvasPos = toCanvas(mouseX, mouseY);
+        const dx = canvasPos.x - copyOrigin.x;
+        const dy = canvasPos.y - copyOrigin.y;
+
+        const linesToPaste = copiedLines.map((line) => ({
+            ...line,
+            points: line.points.map((p) => ({
+                x: p.x + dx,
+                y: p.y + dy,
+            })),
+        }));
+
+        saveState();
+        boardData.lines = [...boardData.lines, ...linesToPaste];
+        isCopying = false;
+        copiedLines = [];
+        redraw();
     }
 </script>
 
@@ -452,6 +564,15 @@
             : 'rgba(0,0,0,0.2)'};
         "
     ></div>
+{/if}
+
+{#if showMenu && !isCopying}
+    <SelectionMenu
+        x={menuPos.x}
+        y={menuPos.y}
+        onCopy={handleCopy}
+        onDelete={handleDelete}
+    />
 {/if}
 
 <style>
