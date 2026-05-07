@@ -1,5 +1,7 @@
 <script>
     import { brushSettings, boardData, undo, redo, clearAll } from "$lib";
+    import orientationVerticalIcon from "$lib/assets/orientation-vertical.png";
+    import orientationHorizontalIcon from "$lib/assets/orientation-horizontal.png";
     import moveIcon from "$lib/assets/hand-cursor.png";
     import pencilIcon from "$lib/assets/pencil.png";
     import eraserIcon from "$lib/assets/eraser.png";
@@ -13,6 +15,7 @@
 
     let posX = $state(10);
     let posY = $state(10);
+    let isVertical = $state(true);
     let isDragging = false;
     let startX = 0;
     let startY = 0;
@@ -44,6 +47,10 @@
         window.removeEventListener("mouseup", stopDrag);
     }
 
+    function toggleOrientation() {
+        isVertical = !isVertical;
+    }
+
     function zoomIn() {
         boardData.zoom = Math.min(10, boardData.zoom + 0.1);
     }
@@ -62,9 +69,22 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
     class="toolbar"
+    class:horizontal={!isVertical}
     onmousedown={startDrag}
     style="left: {posX}px; top: {posY}px;"
 >
+    <button
+        onclick={toggleOrientation}
+        title="Змінити орієнтацію панелі"
+        class="orientation-btn"
+    >
+        <img
+            src={isVertical ? orientationHorizontalIcon : orientationVerticalIcon}
+            alt="Змінити орієнтацію панелі"
+            class="icon"
+        />
+    </button>
+
     <button
         class={brushSettings.tool === "move" ? "active" : ""}
         onclick={() => (brushSettings.tool = "move")}
@@ -151,19 +171,39 @@
 <style lang="scss">
     .toolbar {
         position: fixed;
-        width: 36px;
+        width: auto;
+        min-width: 36px;
         background: #ffffff;
         padding: 6px;
-        border-radius: 10px;
-        box-shadow: 2px 2px 10px #555555;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         display: flex;
         flex-direction: column;
+        align-items: center;
         gap: 8px;
-        z-index: 10;
+        z-index: 1000;
         cursor: grab;
 
         &:active {
             cursor: grabbing;
+        }
+
+        &.horizontal {
+            flex-direction: row;
+            height: auto;
+            min-height: 36px;
+
+            hr {
+                width: 1px;
+                height: 24px;
+                border-top: none;
+                border-left: 1px solid #ddd;
+                margin: 0 4px;
+            }
+
+            label input[type="range"] {
+                width: 60px;
+            }
         }
     }
 
