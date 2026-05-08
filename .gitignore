@@ -23,4 +23,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Deploy
-git-deploy.sh
+#git-deploy.sh
