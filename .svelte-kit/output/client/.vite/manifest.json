@@ -1,0 +1,87 @@
+{
+  ".svelte-kit/generated/client-optimized/app.js": {
+    "file": "_app/immutable/entry/app.BV4fguCr.js",
+    "name": "entry/app",
+    "src": ".svelte-kit/generated/client-optimized/app.js",
+    "isEntry": true,
+    "imports": [
+      "_Dv6m6HPm.js",
+      "_Dj6f-nJM.js",
+      "_DEDqjojZ.js"
+    ],
+    "dynamicImports": [
+      ".svelte-kit/generated/client-optimized/nodes/0.js",
+      ".svelte-kit/generated/client-optimized/nodes/1.js",
+      ".svelte-kit/generated/client-optimized/nodes/2.js"
+    ]
+  },
+  ".svelte-kit/generated/client-optimized/nodes/0.js": {
+    "file": "_app/immutable/nodes/0.DRghZUKx.js",
+    "name": "nodes/0",
+    "src": ".svelte-kit/generated/client-optimized/nodes/0.js",
+    "isEntry": true,
+    "imports": [
+      "_Dv6m6HPm.js",
+      "_DEDqjojZ.js"
+    ]
+  },
+  ".svelte-kit/generated/client-optimized/nodes/1.js": {
+    "file": "_app/immutable/nodes/1.DXlilnZ4.js",
+    "name": "nodes/1",
+    "src": ".svelte-kit/generated/client-optimized/nodes/1.js",
+    "isEntry": true,
+    "imports": [
+      "_Dv6m6HPm.js",
+      "_Dhp2aY_B.js",
+      "_DEDqjojZ.js"
+    ]
+  },
+  ".svelte-kit/generated/client-optimized/nodes/2.js": {
+    "file": "_app/immutable/nodes/2.BP92lHt-.js",
+    "name": "nodes/2",
+    "src": ".svelte-kit/generated/client-optimized/nodes/2.js",
+    "isEntry": true,
+    "imports": [
+      "_Dv6m6HPm.js",
+      "_DEDqjojZ.js"
+    ],
+    "css": [
+      "_app/immutable/assets/2.DE6Ao8ov.css"
+    ],
+    "assets": [
+      "_app/immutable/assets/broom.CRxOTorZ.png"
+    ]
+  },
+  "_DEDqjojZ.js": {
+    "file": "_app/immutable/chunks/DEDqjojZ.js",
+    "name": "disclose-version"
+  },
+  "_Dhp2aY_B.js": {
+    "file": "_app/immutable/chunks/Dhp2aY_B.js",
+    "name": "client",
+    "imports": [
+      "_Dv6m6HPm.js"
+    ]
+  },
+  "_Dj6f-nJM.js": {
+    "file": "_app/immutable/chunks/Dj6f-nJM.js",
+    "name": "preload-helper"
+  },
+  "_Dv6m6HPm.js": {
+    "file": "_app/immutable/chunks/Dv6m6HPm.js",
+    "name": "index-client"
+  },
+  "node_modules/@sveltejs/kit/src/runtime/client/entry.js": {
+    "file": "_app/immutable/entry/start.fdhwEXX3.js",
+    "name": "entry/start",
+    "src": "node_modules/@sveltejs/kit/src/runtime/client/entry.js",
+    "isEntry": true,
+    "imports": [
+      "_Dhp2aY_B.js"
+    ]
+  },
+  "src/lib/assets/broom.png": {
+    "file": "_app/immutable/assets/broom.CRxOTorZ.png",
+    "src": "src/lib/assets/broom.png"
+  }
+}
