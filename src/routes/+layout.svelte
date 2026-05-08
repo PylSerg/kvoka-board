@@ -6,7 +6,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Kvoka Board v1</title>
+	<title>Kvoka Board</title>
 </svelte:head>
 
 {@render children()}
