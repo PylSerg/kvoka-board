@@ -1,5 +1,8 @@
 {
 	"name": "kvoka-board",
+	"workspaces": [
+		"packages/*"
+	],
 	"private": true,
 	"version": "1.0.0",
 	"type": "module",
@@ -17,5 +20,8 @@
 		"sass": "^1.99.0",
 		"svelte": "^5.55.2",
 		"vite": "^8.0.7"
+	},
+	"overrides": {
+		"cookie": "^0.7.0"
 	}
 }
