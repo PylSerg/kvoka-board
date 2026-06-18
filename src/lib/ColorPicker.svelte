@@ -1,15 +1,17 @@
 <script>
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
 
     let {
         color = $bindable(),
         onChange,
         onStartEdit,
         disabled = false,
+        isVertical = true,
     } = $props();
 
     let isOpen = $state(false);
     let colorPickerElement;
+    let popupStyle = $state("top: 0; left: calc(100% + 12px); right: auto; bottom: auto;");
 
     // 9 фіксованих кольорів
     const fixedColors = [
@@ -56,6 +58,32 @@
             window.removeEventListener("pointerdown", handleOutsideClick);
     });
 
+    async function computePopupStyle() {
+        await tick();
+        if (!colorPickerElement) return;
+        const rect = colorPickerElement.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        if (isVertical) {
+            if (rect.left < vw / 2) {
+                // Ближче до лівого краю — відображаємо справа
+                popupStyle = "top: 0; bottom: auto; left: calc(100% + 12px); right: auto;";
+            } else {
+                // Ближче до правого краю — відображаємо зліва
+                popupStyle = "top: 0; bottom: auto; right: calc(100% + 12px); left: auto;";
+            }
+        } else {
+            if (rect.top < vh / 2) {
+                // Ближче до верхнього краю — відображаємо знизу
+                popupStyle = "top: calc(100% + 12px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);";
+            } else {
+                // Ближче до нижнього краю — відображаємо зверху
+                popupStyle = "bottom: calc(100% + 12px); top: auto; left: 50%; right: auto; transform: translateX(-50%);";
+            }
+        }
+    }
+
     function saveCustomColors() {
         localStorage.setItem(
             "kvoka-custom-colors",
@@ -74,6 +102,7 @@
     function togglePopup() {
         if (disabled) return;
         isOpen = !isOpen;
+        if (isOpen) computePopupStyle();
     }
 
     function handleNativeColorChange(e) {
@@ -103,7 +132,7 @@
 
     {#if isOpen}
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div class="popup" onpointerdown={(e) => e.stopPropagation()}>
+        <div class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
             <div class="section-title">Основні кольори</div>
             <div class="color-grid">
                 {#each fixedColors as c}
@@ -186,9 +215,6 @@
 
     .popup {
         position: absolute;
-        top: 0;
-        left: 100%;
-        margin-left: 12px;
         background: #ffffff;
         border-radius: 12px;
         box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
@@ -202,14 +228,6 @@
         cursor: default;
     }
 
-    /* Якщо тулбар горизонтальний, попап має з'являтися зверху або знизу. */
-    :global(.toolbar.horizontal) .popup {
-        top: 100%;
-        left: 50%;
-        margin-left: 0;
-        margin-top: 12px;
-        transform: translateX(-50%);
-    }
 
     .section-title {
         font-size: 11px;

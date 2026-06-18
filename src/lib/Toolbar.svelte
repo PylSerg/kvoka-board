@@ -170,6 +170,7 @@
         onChange={handleInput} 
         onStartEdit={handleStartEdit} 
         disabled={brushSettings.tool === "eraser"}
+        {isVertical}
     />
 
     <label title="Товщина">
