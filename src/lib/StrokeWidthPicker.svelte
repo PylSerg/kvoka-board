@@ -10,18 +10,27 @@
 
     let isOpen = $state(false);
     let containerElement;
-    let popupStyle = $state("top: 0; left: calc(100% + 12px); right: auto; bottom: auto;");
+    let popupStyle = $state(
+        "top: 0; left: calc(100% + 12px); right: auto; bottom: auto;",
+    );
 
-    const presetWidths = [1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 28, 30, 40, 50, 60];
+    const presetWidths = [
+        1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 28, 30, 40, 50, 60,
+    ];
 
     onMount(() => {
         const handleOutsideClick = (e) => {
-            if (isOpen && containerElement && !containerElement.contains(e.target)) {
+            if (
+                isOpen &&
+                containerElement &&
+                !containerElement.contains(e.target)
+            ) {
                 isOpen = false;
             }
         };
         window.addEventListener("pointerdown", handleOutsideClick);
-        return () => window.removeEventListener("pointerdown", handleOutsideClick);
+        return () =>
+            window.removeEventListener("pointerdown", handleOutsideClick);
     });
 
     async function computePopupStyle() {
@@ -33,15 +42,19 @@
 
         if (isVertical) {
             if (rect.left < vw / 2) {
-                popupStyle = "top: 0; bottom: auto; left: calc(100% + 12px); right: auto;";
+                popupStyle =
+                    "top: 0; bottom: auto; left: calc(100% + 12px); right: auto;";
             } else {
-                popupStyle = "top: 0; bottom: auto; right: calc(100% + 12px); left: auto;";
+                popupStyle =
+                    "top: 0; bottom: auto; right: calc(100% + 12px); left: auto;";
             }
         } else {
             if (rect.top < vh / 2) {
-                popupStyle = "top: calc(100% + 12px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);";
+                popupStyle =
+                    "top: calc(100% + 12px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);";
             } else {
-                popupStyle = "bottom: calc(100% + 12px); top: auto; left: 50%; right: auto; transform: translateX(-50%);";
+                popupStyle =
+                    "bottom: calc(100% + 12px); top: auto; left: 50%; right: auto; transform: translateX(-50%);";
             }
         }
     }
@@ -76,18 +89,31 @@
 
     {#if isOpen}
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
+        <div
+            class="popup"
+            style={popupStyle}
+            onpointerdown={(e) => e.stopPropagation()}
+        >
             <div class="section-title">Товщина лінії</div>
             <div class="width-grid">
                 {#each presetWidths as w}
                     <button
                         class="width-swatch"
                         class:selected={width === w}
-                        onclick={() => selectWidth(w)}
+                        onpointerdown={(e) => {
+                            e.stopPropagation();
+                            selectWidth(w);
+                        }}
                         title="{w} px"
                     >
                         <div class="line-preview">
-                            <div class="line-dot" style="width: {Math.min(w, 20)}px; height: {Math.min(w, 20)}px;"></div>
+                            <div
+                                class="line-dot"
+                                style="width: {Math.min(
+                                    w,
+                                    20,
+                                )}px; height: {Math.min(w, 20)}px;"
+                            ></div>
                         </div>
                         <span class="width-label">{w}</span>
                     </button>
@@ -96,13 +122,15 @@
 
             <div class="slider-section">
                 <div class="slider-header">
-                    <span class="section-title" style="margin: 0;">Довільне значення</span>
+                    <span class="section-title" style="margin: 0;"
+                        >Довільне значення</span
+                    >
                     <span class="slider-value">{width} px</span>
                 </div>
                 <input
                     type="range"
                     min="1"
-                    max="60"
+                    max="200"
                     value={width}
                     oninput={handleSliderChange}
                     class="width-slider"
@@ -121,17 +149,20 @@
     }
 
     .stroke-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        border: 1.5px solid #ddd;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid #ddd;
         background: #f8f8f8;
         cursor: pointer;
         padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.15s, border-color 0.15s, transform 0.1s;
+        transition:
+            background 0.15s,
+            border-color 0.15s,
+            transform 0.1s;
     }
 
     .stroke-btn:hover {
@@ -164,6 +195,7 @@
         flex-direction: column;
         gap: 12px;
         cursor: default;
+        touch-action: manipulation;
     }
 
     .section-title {
@@ -191,7 +223,11 @@
         border: 1.5px solid transparent;
         background: #f5f5f5;
         cursor: pointer;
-        transition: background 0.15s, border-color 0.15s, transform 0.1s;
+        touch-action: manipulation;
+        transition:
+            background 0.15s,
+            border-color 0.15s,
+            transform 0.1s;
         min-height: 44px;
     }
 
@@ -258,5 +294,6 @@
         width: 100%;
         cursor: pointer;
         accent-color: #007bff;
+        touch-action: auto;
     }
 </style>
