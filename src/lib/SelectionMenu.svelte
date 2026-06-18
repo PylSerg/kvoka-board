@@ -5,7 +5,7 @@
 <div 
     class="selection-menu" 
     style="left: {x + 15}px; top: {y}px;"
-    onmousedown={(e) => e.stopPropagation()}
+    onpointerdown={(e) => e.stopPropagation()}
     role="menu"
     aria-label="Контекстне меню виділення"
     tabindex="-1"

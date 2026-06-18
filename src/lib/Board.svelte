@@ -37,6 +37,15 @@
     let offscreenCanvas;
     let offscreenCtx;
 
+    // Змінні для жестів двома пальцями (pinch-to-zoom / pan)
+    let activePointers = new Map();
+    let isTwoFingerGesturing = false;
+    let initialTouchDistance = 0;
+    let initialTouchCenter = { x: 0, y: 0 };
+    let initialZoom = 1;
+    let initialOffsetX = 0;
+    let initialOffsetY = 0;
+
     onMount(() => {
         ctx = canvas.getContext("2d");
         resizeCanvas();
@@ -330,7 +339,53 @@
         return false;
     }
 
-    function handleMouseDown(e) {
+    function handlePointerDown(e) {
+        activePointers.set(e.pointerId, e);
+
+        // Якщо маємо 2 активних вказівника (пальці), активуємо жест масштабування/панорамування
+        if (activePointers.size === 2) {
+            isTwoFingerGesturing = true;
+            isDrawing = false;
+            isPanning = false;
+            isSelectingArea = false;
+            isMoving = false;
+            
+            // Якщо ми почали малювати лінію першим пальцем — видаляємо її, 
+            // оскільки користувач перейшов до жесту двома пальцями
+            if (currentLineId) {
+                boardData.lines = boardData.lines.filter((l) => l.id !== currentLineId);
+                currentLineId = null;
+            }
+
+            const pointers = Array.from(activePointers.values());
+            const p1 = pointers[0];
+            const p2 = pointers[1];
+            const dx = p2.clientX - p1.clientX;
+            const dy = p2.clientY - p1.clientY;
+            initialTouchDistance = Math.sqrt(dx * dx + dy * dy);
+            initialTouchCenter = {
+                x: (p1.clientX + p2.clientX) / 2,
+                y: (p1.clientY + p2.clientY) / 2,
+            };
+            initialZoom = boardData.zoom;
+            initialOffsetX = boardData.offsetX;
+            initialOffsetY = boardData.offsetY;
+            redraw();
+            return;
+        }
+
+        if (activePointers.size > 2) {
+            // Ігноруємо дотик третього і більше пальців
+            return;
+        }
+
+        // Захоплюємо вказівник, щоб отримувати події руху навіть поза межами канвасу
+        try {
+            e.target.setPointerCapture(e.pointerId);
+        } catch (err) {
+            console.error("Failed to set pointer capture", err);
+        }
+
         const rect = canvas.getBoundingClientRect();
         const screenX = e.clientX - rect.left;
         const screenY = e.clientY - rect.top;
@@ -406,7 +461,47 @@
         }
     }
 
-    function handleMouseMove(e) {
+    function handlePointerMove(e) {
+        activePointers.set(e.pointerId, e);
+
+        // Якщо ми в режимі жестів двома пальцями — оновлюємо зум і зсув
+        if (isTwoFingerGesturing && activePointers.size >= 2) {
+            const pointers = Array.from(activePointers.values());
+            const p1 = pointers[0];
+            const p2 = pointers[1];
+            const dx = p2.clientX - p1.clientX;
+            const dy = p2.clientY - p1.clientY;
+            const currentDistance = Math.sqrt(dx * dx + dy * dy);
+            const currentCenter = {
+                x: (p1.clientX + p2.clientX) / 2,
+                y: (p1.clientY + p2.clientY) / 2,
+            };
+
+            let newZoom = initialZoom;
+            if (initialTouchDistance > 0) {
+                newZoom = initialZoom * (currentDistance / initialTouchDistance);
+            }
+            newZoom = Math.max(0.1, Math.min(10, newZoom));
+            boardData.zoom = newZoom;
+
+            // Зсув вираховується так, щоб точка на канвасі під початковим центром жестів
+            // залишалася під поточним центром дотиків пальців
+            const centerCanvasX = (initialTouchCenter.x - initialOffsetX) / initialZoom;
+            const centerCanvasY = (initialTouchCenter.y - initialOffsetY) / initialZoom;
+
+            boardData.offsetX = currentCenter.x - centerCanvasX * boardData.zoom;
+            boardData.offsetY = currentCenter.y - centerCanvasY * boardData.zoom;
+
+            redraw();
+            return;
+        }
+
+        // Якщо жест двома пальцями був активний, але зараз залишився лише один палець,
+        // ми не хочемо малювати поодиноким пальцем до повного відпускання екрану.
+        if (isTwoFingerGesturing) {
+            return;
+        }
+
         const rect = canvas.getBoundingClientRect();
         const screenX = e.clientX - rect.left;
         const screenY = e.clientY - rect.top;
@@ -465,7 +560,21 @@
         }
     }
 
-    function handleMouseUp(e) {
+    function handlePointerUp(e) {
+        activePointers.delete(e.pointerId);
+
+        const wasTwoFingerGesturing = isTwoFingerGesturing;
+
+        if (activePointers.size < 2) {
+            isTwoFingerGesturing = false;
+        }
+
+        // Якщо ми завершили жест двома пальцями (або все ще відпускаємо пальці),
+        // ми просто ігноруємо решту дій, поки екран повністю не очиститься від дотиків.
+        if (wasTwoFingerGesturing) {
+            return;
+        }
+
         if (isSelectingArea) {
             const rect = canvas.getBoundingClientRect();
             const screenX = e.clientX - rect.left;
@@ -561,16 +670,17 @@
     bind:this={canvas}
     class={brushSettings.tool}
     class:panning={isPanning}
-    onmousedown={handleMouseDown}
-    onmousemove={handleMouseMove}
-    onmouseup={handleMouseUp}
-    onmouseenter={(e) => {
+    onpointerdown={handlePointerDown}
+    onpointermove={handlePointerMove}
+    onpointerup={handlePointerUp}
+    onpointercancel={handlePointerUp}
+    onpointerenter={(e) => {
         showCursor = true;
         mouseX = e.clientX;
         mouseY = e.clientY;
     }}
-    onmouseleave={(e) => {
-        handleMouseUp(e);
+    onpointerleave={(e) => {
+        handlePointerUp(e);
         showCursor = false;
     }}
     oncontextmenu={(e) => e.preventDefault()}
@@ -607,6 +717,7 @@
     canvas {
         background: #ffffff;
         display: block;
+        touch-action: none;
     }
 
     canvas.brush,

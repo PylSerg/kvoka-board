@@ -32,8 +32,9 @@
         e.preventDefault(); // Запобігаємо виділенню тексту
         startX = e.clientX - posX;
         startY = e.clientY - posY;
-        window.addEventListener("mousemove", handleDrag);
-        window.addEventListener("mouseup", stopDrag);
+        window.addEventListener("pointermove", handleDrag);
+        window.addEventListener("pointerup", stopDrag);
+        window.addEventListener("pointercancel", stopDrag);
     }
 
     function handleDrag(e) {
@@ -44,8 +45,9 @@
 
     function stopDrag() {
         isDragging = false;
-        window.removeEventListener("mousemove", handleDrag);
-        window.removeEventListener("mouseup", stopDrag);
+        window.removeEventListener("pointermove", handleDrag);
+        window.removeEventListener("pointerup", stopDrag);
+        window.removeEventListener("pointercancel", stopDrag);
     }
 
     function toggleOrientation() {
@@ -96,9 +98,20 @@
 <div
     class="toolbar"
     class:horizontal={!isVertical}
-    onmousedown={startDrag}
+    onpointerdown={startDrag}
     style="left: {posX}px; top: {posY}px;"
 >
+    <div class="drag-handle" title="Перетягнути панель">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="9" cy="5" r="2"/>
+            <circle cx="9" cy="12" r="2"/>
+            <circle cx="9" cy="19" r="2"/>
+            <circle cx="15" cy="5" r="2"/>
+            <circle cx="15" cy="12" r="2"/>
+            <circle cx="15" cy="19" r="2"/>
+        </svg>
+    </div>
+
     <button
         onclick={toggleOrientation}
         title="Змінити орієнтацію панелі"
@@ -223,15 +236,33 @@
         z-index: 1000;
         cursor: grab;
         user-select: none;
+        touch-action: none;
 
         &:active {
             cursor: grabbing;
+        }
+
+        .drag-handle {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ccc;
+            padding: 2px;
+            transition: color 0.2s;
+
+            &:hover {
+                color: #888;
+            }
         }
 
         &.horizontal {
             flex-direction: row;
             height: auto;
             min-height: 36px;
+
+            .drag-handle {
+                transform: rotate(90deg);
+            }
 
             hr {
                 width: 1px;
