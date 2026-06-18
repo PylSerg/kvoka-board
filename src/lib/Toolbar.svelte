@@ -12,6 +12,7 @@
     import undoIcon from "$lib/assets/undo.png";
     import redoIcon from "$lib/assets/redo.png";
     import clearIcon from "$lib/assets/broom.png";
+    import ColorPicker from "./ColorPicker.svelte";
 
     let posX = $state(10);
     let posY = $state(10);
@@ -164,15 +165,12 @@
 
     <hr />
 
-    <label title="Колір">
-        <input
-            type="color"
-            bind:value={brushSettings.color}
-            oninput={handleInput}
-            onmousedown={handleStartEdit}
-            disabled={brushSettings.tool === "eraser"}
-        />
-    </label>
+    <ColorPicker 
+        bind:color={brushSettings.color} 
+        onChange={handleInput} 
+        onStartEdit={handleStartEdit} 
+        disabled={brushSettings.tool === "eraser"}
+    />
 
     <label title="Товщина">
         <input
