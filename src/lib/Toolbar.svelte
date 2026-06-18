@@ -13,6 +13,7 @@
     import redoIcon from "$lib/assets/redo.png";
     import clearIcon from "$lib/assets/broom.png";
     import ColorPicker from "./ColorPicker.svelte";
+    import StrokeWidthPicker from "./StrokeWidthPicker.svelte";
 
     let posX = $state(10);
     let posY = $state(10);
@@ -173,16 +174,12 @@
         {isVertical}
     />
 
-    <label title="Товщина">
-        <input
-            type="range"
-            min="1"
-            max="50"
-            bind:value={brushSettings.width}
-            oninput={handleInput}
-            onmousedown={handleStartEdit}
-        />
-    </label>
+    <StrokeWidthPicker
+        bind:width={brushSettings.width}
+        onChange={handleInput}
+        onStartEdit={handleStartEdit}
+        {isVertical}
+    />
 
     <hr />
 
