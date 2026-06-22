@@ -462,7 +462,9 @@
     }
 
     function handlePointerMove(e) {
-        activePointers.set(e.pointerId, e);
+        if (activePointers.has(e.pointerId)) {
+            activePointers.set(e.pointerId, e);
+        }
 
         // Якщо ми в режимі жестів двома пальцями — оновлюємо зум і зсув
         if (isTwoFingerGesturing && activePointers.size >= 2) {
