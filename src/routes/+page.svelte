@@ -1,10 +1,11 @@
 <script>
-    import { Board, Toolbar } from "$lib";
+    import { Board, Toolbar, Menu } from "$lib";
 </script>
 
 <main>
     <Board />
     <Toolbar />
+    <Menu />
 </main>
 
 <style>

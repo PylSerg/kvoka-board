@@ -15,8 +15,8 @@
     import ColorPicker from "./ColorPicker.svelte";
     import StrokeWidthPicker from "./StrokeWidthPicker.svelte";
 
-    let posX = $state(10);
-    let posY = $state(10);
+    let posX = $state(20);
+    let posY = $state(80);
     let isVertical = $state(true);
     let isDragging = false;
     let startX = 0;
