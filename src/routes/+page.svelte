@@ -1,11 +1,16 @@
 <script>
-    import { Board, Toolbar, Menu } from "$lib";
+    import { Board, Toolbar, Menu, PdfExportPanel, PdfFrameOverlay, boardData } from "$lib";
 </script>
 
 <main>
     <Board />
-    <Toolbar />
-    <Menu />
+    {#if !boardData.isPdfMode}
+        <Toolbar />
+        <Menu />
+    {:else}
+        <PdfExportPanel />
+        <PdfFrameOverlay />
+    {/if}
 </main>
 
 <style>

@@ -108,6 +108,33 @@
         };
         reader.readAsText(file);
     }
+
+    function enterPdfMode() {
+        boardData.isPdfMode = true;
+        boardData.selectedLineIds = [];
+        closeMenu();
+
+        if (boardData.pdfFrames.length === 0) {
+            const screenCenterX = window.innerWidth / 2;
+            const screenCenterY = window.innerHeight / 2;
+            const canvasX = (screenCenterX - boardData.offsetX) / boardData.zoom;
+            const canvasY = (screenCenterY - boardData.offsetY) / boardData.zoom;
+            const defWidth = 595; 
+            const defHeight = 842; 
+
+            boardData.pdfFrames = [
+                {
+                    id: Date.now() + Math.random(),
+                    x: canvasX - defWidth / 2,
+                    y: canvasY - defHeight / 2,
+                    width: defWidth,
+                    height: defHeight,
+                    isVertical: true,
+                    number: 1
+                }
+            ];
+        }
+    }
 </script>
 
 <div class="menu-container" bind:this={menuContainer}>
@@ -152,6 +179,21 @@
                     <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
                 <span>Експортувати дошку</span>
+            </button>
+
+            <button
+                id="pdf-export-option"
+                class="dropdown-item"
+                onclick={enterPdfMode}
+            >
+                <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <circle cx="10" cy="9" r="1"></circle>
+                </svg>
+                <span>Експортувати як PDF</span>
             </button>
         </div>
     {/if}

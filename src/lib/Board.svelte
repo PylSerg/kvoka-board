@@ -340,6 +340,22 @@
     }
 
     function handlePointerDown(e) {
+        if (boardData.isPdfMode) {
+            if (e.button === 1 || e.button === 2 || brushSettings.tool === "move") {
+                activePointers.set(e.pointerId, e);
+                try {
+                    e.target.setPointerCapture(e.pointerId);
+                } catch (err) {
+                    console.error("Failed to set pointer capture", err);
+                }
+                const rect = canvas.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                isPanning = true;
+            }
+            return;
+        }
+
         activePointers.set(e.pointerId, e);
 
         // Якщо маємо 2 активних вказівника (пальці), активуємо жест масштабування/панорамування

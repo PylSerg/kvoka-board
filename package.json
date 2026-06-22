@@ -25,5 +25,8 @@
 	},
 	"overrides": {
 		"cookie": "^0.7.0"
+	},
+	"dependencies": {
+		"jspdf": "^4.2.1"
 	}
 }

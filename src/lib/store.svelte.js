@@ -12,5 +12,7 @@ export const boardData = $state({
     selectedLineIds: [],  // <--- Тепер це масив для множинного виділення!
     zoom: 1,
     offsetX: 0,
-    offsetY: 0
+    offsetY: 0,
+    pdfFrames: [],        // Фрейми для експорту в PDF: { id, x, y, width, height, isVertical, number }
+    isPdfMode: false      // Чи активний режим налаштування фреймів PDF
 });
