@@ -14,6 +14,7 @@
     import clearIcon from "$lib/assets/broom.png";
     import ColorPicker from "./ColorPicker.svelte";
     import StrokeWidthPicker from "./StrokeWidthPicker.svelte";
+    import ShapePicker from "./ShapePicker.svelte";
 
     let posX = $state(20);
     let posY = $state(80);
@@ -183,6 +184,26 @@
 
     <hr />
 
+    <ShapePicker
+        {isVertical}
+        disabled={brushSettings.tool === "eraser"}
+        onToolSelect={(tool) => (brushSettings.tool = tool)}
+    />
+
+    <button
+        class={brushSettings.tool === "text" ? "active" : ""}
+        onclick={() => (brushSettings.tool = "text")}
+        title="Текст"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon text-icon">
+            <polyline points="4 7 4 4 20 4 20 7"></polyline>
+            <line x1="9" y1="20" x2="15" y2="20"></line>
+            <line x1="12" y1="4" x2="12" y2="20"></line>
+        </svg>
+    </button>
+
+    <hr />
+
     <button onclick={zoomIn} title="Збільшити" class="action-btn">
         <img src={zoomInIcon} alt="Збільшити" class="icon" />
     </button>
@@ -295,12 +316,20 @@
             height: 20px;
             object-fit: contain;
         }
+
+        .text-icon {
+            color: #333;
+        }
     }
 
     button.active {
         background-color: #007bff;
         .icon {
             filter: invert(1);
+        }
+        .text-icon {
+            color: #fff;
+            filter: none;
         }
         &:hover {
             background-color: #0056b3;

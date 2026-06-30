@@ -1,5 +1,5 @@
 <script>
-    let { x, y, onCopy, onDelete } = $props();
+    let { x, y, onCopy, onDelete, isText = false, onEdit } = $props();
 </script>
 
 <div 
@@ -10,6 +10,13 @@
     aria-label="Контекстне меню виділення"
     tabindex="-1"
 >
+    {#if isText}
+        <button class="menu-item edit" onclick={onEdit}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Редагувати
+        </button>
+        <div class="divider"></div>
+    {/if}
     <button class="menu-item copy" onclick={onCopy}>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
         Копіювати
@@ -73,6 +80,15 @@
     .menu-item:hover svg {
         opacity: 1;
         stroke: #007bff;
+    }
+
+    .menu-item.edit:hover {
+        background: rgba(34, 197, 94, 0.1);
+        color: #16a34a;
+    }
+
+    .menu-item.edit:hover svg {
+        stroke: #16a34a;
     }
 
     .menu-item.delete:hover {
