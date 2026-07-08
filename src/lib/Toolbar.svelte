@@ -11,7 +11,7 @@
     import zoom100Icon from "$lib/assets/zoom-100.png";
     import undoIcon from "$lib/assets/undo.png";
     import redoIcon from "$lib/assets/redo.png";
-    import clearIcon from "$lib/assets/broom.png";
+    import ClearConfirm from "./ClearConfirm.svelte";
     import ColorPicker from "./ColorPicker.svelte";
     import StrokeWidthPicker from "./StrokeWidthPicker.svelte";
     import ShapePicker from "./ShapePicker.svelte";
@@ -228,13 +228,7 @@
 
     <hr />
 
-    <button
-        onclick={clearAll}
-        title="Очистити дошку"
-        class="action-btn delete-btn"
-    >
-        <img src={clearIcon} alt="Очистити дошку" class="icon" />
-    </button>
+    <ClearConfirm {isVertical} onConfirm={clearAll} />
 </div>
 
 <style lang="scss">
