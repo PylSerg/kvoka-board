@@ -31,25 +31,29 @@
 
     function exportBoard() {
         try {
-            const dataStr = JSON.stringify({
-                version: 1,
-                lines: boardData.lines,
-                zoom: boardData.zoom,
-                offsetX: boardData.offsetX,
-                offsetY: boardData.offsetY
-            }, null, 2);
+            const dataStr = JSON.stringify(
+                {
+                    version: 1,
+                    lines: boardData.lines,
+                    zoom: boardData.zoom,
+                    offsetX: boardData.offsetX,
+                    offsetY: boardData.offsetY,
+                },
+                null,
+                2,
+            );
 
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement("a");
             a.href = url;
             const date = new Date();
-            const timestamp = date.toISOString().split('T')[0];
+            const timestamp = date.toISOString().split("T")[0];
             a.download = `kvoka-board-${timestamp}.json`;
             document.body.appendChild(a);
             a.click();
-            
+
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             closeMenu();
@@ -71,7 +75,7 @@
         reader.onload = (event) => {
             try {
                 const parsed = JSON.parse(event.target.result);
-                
+
                 if (!parsed || !Array.isArray(parsed.lines)) {
                     alert("Неправильний формат файлу дошки.");
                     return;
@@ -82,20 +86,20 @@
 
                 // Оновлюємо дані дошки
                 boardData.lines = parsed.lines;
-                
-                if (typeof parsed.zoom === 'number') {
+
+                if (typeof parsed.zoom === "number") {
                     boardData.zoom = parsed.zoom;
                 } else {
                     boardData.zoom = 1;
                 }
 
-                if (typeof parsed.offsetX === 'number') {
+                if (typeof parsed.offsetX === "number") {
                     boardData.offsetX = parsed.offsetX;
                 } else {
                     boardData.offsetX = 0;
                 }
 
-                if (typeof parsed.offsetY === 'number') {
+                if (typeof parsed.offsetY === "number") {
                     boardData.offsetY = parsed.offsetY;
                 } else {
                     boardData.offsetY = 0;
@@ -120,10 +124,12 @@
         if (boardData.pdfFrames.length === 0) {
             const screenCenterX = window.innerWidth / 2;
             const screenCenterY = window.innerHeight / 2;
-            const canvasX = (screenCenterX - boardData.offsetX) / boardData.zoom;
-            const canvasY = (screenCenterY - boardData.offsetY) / boardData.zoom;
-            const defWidth = 595; 
-            const defHeight = 842; 
+            const canvasX =
+                (screenCenterX - boardData.offsetX) / boardData.zoom;
+            const canvasY =
+                (screenCenterY - boardData.offsetY) / boardData.zoom;
+            const defWidth = 595;
+            const defHeight = 842;
 
             boardData.pdfFrames = [
                 {
@@ -133,20 +139,20 @@
                     width: defWidth,
                     height: defHeight,
                     isVertical: true,
-                    number: 1
-                }
+                    number: 1,
+                },
             ];
         }
     }
 
     // --- Фон ---
     const overlayOptions = [
-        { value: 'none',     label: 'Немає',           icon: 'none' },
-        { value: 'grid',     label: 'Клітинка',         icon: 'grid' },
-        { value: 'lines',    label: 'Лінія',            icon: 'lines' },
-        { value: 'diagonal', label: 'Коса лінія',       icon: 'diagonal' },
-        { value: 'dots',     label: 'Точки',            icon: 'dots' },
-        { value: 'draft',    label: 'Для креслення',    icon: 'draft' },
+        { value: "none", label: "Немає", icon: "none" },
+        { value: "grid", label: "Клітинка", icon: "grid" },
+        { value: "lines", label: "Лінія", icon: "lines" },
+        { value: "diagonal", label: "Коса лінія", icon: "diagonal" },
+        { value: "dots", label: "Точки", icon: "dots" },
+        { value: "draft", label: "Креслення", icon: "draft" },
     ];
 
     function handleOverlayColorChange(e) {
@@ -170,10 +176,10 @@
     }
 
     function resetBgSettings() {
-        bgSettings.overlay = 'none';
+        bgSettings.overlay = "none";
         bgSettings.scale = 40;
-        bgSettings.overlayColor = '#d0d8e8';
-        bgSettings.bgColor = '#ffffff';
+        bgSettings.overlayColor = "#d0d8e8";
+        bgSettings.bgColor = "#ffffff";
         saveBgSettings();
     }
 </script>
@@ -187,7 +193,17 @@
         title="Меню"
         aria-label="Меню керування дошкою"
     >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+        >
             <line x1="3" y1="12" x2="21" y2="12"></line>
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -202,15 +218,39 @@
                     id="bg-option"
                     class="dropdown-item submenu-trigger"
                     class:active={isBgOpen}
-                    onclick={() => isBgOpen = !isBgOpen}
+                    onclick={() => (isBgOpen = !isBgOpen)}
                 >
-                    <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <svg
+                        class="item-icon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"
+                        ></rect>
                         <path d="M3 9h18"></path>
                         <path d="M9 21V9"></path>
                     </svg>
                     <span>Фон</span>
-                    <svg class="chevron" class:rotated={isBgOpen} xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <svg
+                        class="chevron"
+                        class:rotated={isBgOpen}
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
                         <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                 </button>
@@ -229,27 +269,301 @@
                                 {#each overlayOptions as opt}
                                     <button
                                         class="overlay-btn"
-                                        class:selected={bgSettings.overlay === opt.value}
+                                        class:selected={bgSettings.overlay ===
+                                            opt.value}
                                         onclick={() => selectOverlay(opt.value)}
                                         title={opt.label}
                                         aria-label={opt.label}
                                     >
                                         <span class="overlay-icon">
-                                            {#if opt.icon === 'none'}
-                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="17" x2="17" y2="5" stroke="currentColor" stroke-width="1.5"/></svg>
-                                            {:else if opt.icon === 'grid'}
-                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="8" x2="21" y2="8" stroke="currentColor" stroke-width="1"/><line x1="1" y1="14" x2="21" y2="14" stroke="currentColor" stroke-width="1"/><line x1="8" y1="1" x2="8" y2="21" stroke="currentColor" stroke-width="1"/><line x1="14" y1="1" x2="14" y2="21" stroke="currentColor" stroke-width="1"/></svg>
-                                            {:else if opt.icon === 'lines'}
-                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="7" x2="21" y2="7" stroke="currentColor" stroke-width="1"/><line x1="1" y1="11" x2="21" y2="11" stroke="currentColor" stroke-width="1"/><line x1="1" y1="15" x2="21" y2="15" stroke="currentColor" stroke-width="1"/></svg>
-                                            {:else if opt.icon === 'diagonal'}
-                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="7" x2="21" y2="7" stroke="currentColor" stroke-width="1"/><line x1="1" y1="14" x2="21" y2="14" stroke="currentColor" stroke-width="1"/><line x1="3" y1="1" x2="9" y2="21" stroke="currentColor" stroke-width="1"/><line x1="13" y1="1" x2="19" y2="21" stroke="currentColor" stroke-width="1"/></svg>
-                                            {:else if opt.icon === 'dots'}
-                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="15" cy="7" r="1.5" fill="currentColor"/><circle cx="7" cy="15" r="1.5" fill="currentColor"/><circle cx="15" cy="15" r="1.5" fill="currentColor"/><circle cx="11" cy="11" r="1.5" fill="currentColor"/></svg>
-                                            {:else if opt.icon === 'draft'}
-                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="17" x2="21" y2="17" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="5" y1="1" x2="5" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="9" y1="1" x2="9" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="13" y1="1" x2="13" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="17" y1="1" x2="17" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="1" x2="21" y2="21" stroke="currentColor" stroke-width="1"/><line x1="1" y1="21" x2="21" y2="1" stroke="currentColor" stroke-width="1"/></svg>
+                                            {#if opt.icon === "none"}
+                                                <svg
+                                                    width="22"
+                                                    height="22"
+                                                    viewBox="0 0 22 22"
+                                                    ><rect
+                                                        x="1"
+                                                        y="1"
+                                                        width="20"
+                                                        height="20"
+                                                        rx="3"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                    /><line
+                                                        x1="5"
+                                                        y1="17"
+                                                        x2="17"
+                                                        y2="5"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                    /></svg
+                                                >
+                                            {:else if opt.icon === "grid"}
+                                                <svg
+                                                    width="22"
+                                                    height="22"
+                                                    viewBox="0 0 22 22"
+                                                    ><rect
+                                                        x="1"
+                                                        y="1"
+                                                        width="20"
+                                                        height="20"
+                                                        rx="3"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="8"
+                                                        x2="21"
+                                                        y2="8"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="14"
+                                                        x2="21"
+                                                        y2="14"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="8"
+                                                        y1="1"
+                                                        x2="8"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="14"
+                                                        y1="1"
+                                                        x2="14"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /></svg
+                                                >
+                                            {:else if opt.icon === "lines"}
+                                                <svg
+                                                    width="22"
+                                                    height="22"
+                                                    viewBox="0 0 22 22"
+                                                    ><rect
+                                                        x="1"
+                                                        y="1"
+                                                        width="20"
+                                                        height="20"
+                                                        rx="3"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="7"
+                                                        x2="21"
+                                                        y2="7"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="11"
+                                                        x2="21"
+                                                        y2="11"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="15"
+                                                        x2="21"
+                                                        y2="15"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /></svg
+                                                >
+                                            {:else if opt.icon === "diagonal"}
+                                                <svg
+                                                    width="22"
+                                                    height="22"
+                                                    viewBox="0 0 22 22"
+                                                    ><rect
+                                                        x="1"
+                                                        y="1"
+                                                        width="20"
+                                                        height="20"
+                                                        rx="3"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="7"
+                                                        x2="21"
+                                                        y2="7"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="14"
+                                                        x2="21"
+                                                        y2="14"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="3"
+                                                        y1="1"
+                                                        x2="9"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="13"
+                                                        y1="1"
+                                                        x2="19"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /></svg
+                                                >
+                                            {:else if opt.icon === "dots"}
+                                                <svg
+                                                    width="22"
+                                                    height="22"
+                                                    viewBox="0 0 22 22"
+                                                    ><rect
+                                                        x="1"
+                                                        y="1"
+                                                        width="20"
+                                                        height="20"
+                                                        rx="3"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                    /><circle
+                                                        cx="7"
+                                                        cy="7"
+                                                        r="1.5"
+                                                        fill="currentColor"
+                                                    /><circle
+                                                        cx="15"
+                                                        cy="7"
+                                                        r="1.5"
+                                                        fill="currentColor"
+                                                    /><circle
+                                                        cx="7"
+                                                        cy="15"
+                                                        r="1.5"
+                                                        fill="currentColor"
+                                                    /><circle
+                                                        cx="15"
+                                                        cy="15"
+                                                        r="1.5"
+                                                        fill="currentColor"
+                                                    /><circle
+                                                        cx="11"
+                                                        cy="11"
+                                                        r="1.5"
+                                                        fill="currentColor"
+                                                    /></svg
+                                                >
+                                            {:else if opt.icon === "draft"}
+                                                <svg
+                                                    width="22"
+                                                    height="22"
+                                                    viewBox="0 0 22 22"
+                                                    ><rect
+                                                        x="1"
+                                                        y="1"
+                                                        width="20"
+                                                        height="20"
+                                                        rx="3"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="5"
+                                                        x2="21"
+                                                        y2="5"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="9"
+                                                        x2="21"
+                                                        y2="9"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="13"
+                                                        x2="21"
+                                                        y2="13"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="17"
+                                                        x2="21"
+                                                        y2="17"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="5"
+                                                        y1="1"
+                                                        x2="5"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="9"
+                                                        y1="1"
+                                                        x2="9"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="13"
+                                                        y1="1"
+                                                        x2="13"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="17"
+                                                        y1="1"
+                                                        x2="17"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="0.5"
+                                                        opacity="0.5"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="1"
+                                                        x2="21"
+                                                        y2="21"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /><line
+                                                        x1="1"
+                                                        y1="21"
+                                                        x2="21"
+                                                        y2="1"
+                                                        stroke="currentColor"
+                                                        stroke-width="1"
+                                                    /></svg
+                                                >
                                             {/if}
                                         </span>
-                                        <span class="overlay-label">{opt.label}</span>
+                                        <span class="overlay-label"
+                                            >{opt.label}</span
+                                        >
                                     </button>
                                 {/each}
                             </div>
@@ -259,7 +573,9 @@
                         <div class="submenu-section">
                             <div class="submenu-label">
                                 Масштаб накладки
-                                <span class="scale-value">{bgSettings.scale} px</span>
+                                <span class="scale-value"
+                                    >{bgSettings.scale} px</span
+                                >
                             </div>
                             <div class="scale-row">
                                 <span class="scale-hint">10</span>
@@ -272,7 +588,7 @@
                                     value={bgSettings.scale}
                                     oninput={handleScaleInput}
                                     class="scale-slider"
-                                    disabled={bgSettings.overlay === 'none'}
+                                    disabled={bgSettings.overlay === "none"}
                                 />
                                 <span class="scale-hint">200</span>
                             </div>
@@ -287,14 +603,16 @@
                                     style="background: {bgSettings.overlayColor};"
                                 ></div>
                                 <label class="color-label">
-                                    <span class="color-hex">{bgSettings.overlayColor}</span>
+                                    <span class="color-hex"
+                                        >{bgSettings.overlayColor}</span
+                                    >
                                     <input
                                         id="bg-overlay-color"
                                         type="color"
                                         value={bgSettings.overlayColor}
                                         oninput={handleOverlayColorChange}
                                         class="native-color-input"
-                                        disabled={bgSettings.overlay === 'none'}
+                                        disabled={bgSettings.overlay === "none"}
                                     />
                                 </label>
                             </div>
@@ -309,7 +627,9 @@
                                     style="background: {bgSettings.bgColor}; border: 1px solid #ccc;"
                                 ></div>
                                 <label class="color-label">
-                                    <span class="color-hex">{bgSettings.bgColor}</span>
+                                    <span class="color-hex"
+                                        >{bgSettings.bgColor}</span
+                                    >
                                     <input
                                         id="bg-fill-color"
                                         type="color"
@@ -323,7 +643,9 @@
 
                         <!-- Роздільник та кнопка Скинути -->
                         <div class="divider"></div>
-                        <button class="reset-bg-btn" onclick={resetBgSettings}>Скинути</button>
+                        <button class="reset-bg-btn" onclick={resetBgSettings}
+                            >Скинути</button
+                        >
                     </div>
                 {/if}
             </div>
@@ -336,7 +658,18 @@
                 class="dropdown-item"
                 onclick={triggerImport}
             >
-                <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                    class="item-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -349,7 +682,18 @@
                 class="dropdown-item"
                 onclick={exportBoard}
             >
-                <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                    class="item-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="17 8 12 3 7 8"></polyline>
                     <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -362,8 +706,21 @@
                 class="dropdown-item"
                 onclick={enterPdfMode}
             >
-                <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <svg
+                    class="item-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path
+                        d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    ></path>
                     <polyline points="14 2 14 8 20 8"></polyline>
                     <line x1="16" y1="13" x2="8" y2="13"></line>
                     <line x1="16" y1="17" x2="8" y2="17"></line>
@@ -403,7 +760,9 @@
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(0, 0, 0, 0.08);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+        box-shadow:
+            0 4px 12px rgba(0, 0, 0, 0.08),
+            0 1px 3px rgba(0, 0, 0, 0.05);
         color: #333333;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -414,7 +773,9 @@
     .menu-btn:hover {
         background: #ffffff;
         transform: scale(1.05);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+        box-shadow:
+            0 6px 16px rgba(0, 0, 0, 0.12),
+            0 2px 4px rgba(0, 0, 0, 0.06);
         border-color: rgba(0, 123, 255, 0.3);
         color: #007bff;
     }
@@ -438,7 +799,9 @@
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.5);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 3px 10px rgba(0, 0, 0, 0.05);
+        box-shadow:
+            0 10px 25px rgba(0, 0, 0, 0.1),
+            0 3px 10px rgba(0, 0, 0, 0.05);
         border-radius: 12px;
         padding: 6px;
         min-width: 210px;
@@ -543,7 +906,9 @@
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border: 1px solid rgba(0, 0, 0, 0.08);
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.06);
+        box-shadow:
+            0 12px 32px rgba(0, 0, 0, 0.12),
+            0 3px 10px rgba(0, 0, 0, 0.06);
         border-radius: 14px;
         padding: 14px;
         width: 240px;
@@ -649,7 +1014,12 @@
         height: 4px;
         appearance: none;
         -webkit-appearance: none;
-        background: linear-gradient(to right, #007bff 0%, #007bff calc((var(--val, 40) - 10) / 190 * 100%), #e0e0e0 calc((var(--val, 40) - 10) / 190 * 100%));
+        background: linear-gradient(
+            to right,
+            #007bff 0%,
+            #007bff calc((var(--val, 40) - 10) / 190 * 100%),
+            #e0e0e0 calc((var(--val, 40) - 10) / 190 * 100%)
+        );
         border-radius: 4px;
         outline: none;
         cursor: pointer;
@@ -662,7 +1032,7 @@
         border-radius: 50%;
         background: #007bff;
         border: 2px solid #fff;
-        box-shadow: 0 1px 4px rgba(0,123,255,0.4);
+        box-shadow: 0 1px 4px rgba(0, 123, 255, 0.4);
         cursor: pointer;
         transition: transform 0.15s ease;
     }
@@ -698,7 +1068,7 @@
         height: 24px;
         border-radius: 50%;
         flex-shrink: 0;
-        box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
     }
 
     .color-label {
