@@ -17,12 +17,14 @@
     import StrokeWidthPicker from "./StrokeWidthPicker.svelte";
     import ShapePicker from "./ShapePicker.svelte";
 
-    let posX = $state(20);
-    let posY = $state(80);
-    let isVertical = $state(true);
+    let posX = $state(0);
+    let posY = $state(0);
+    let isVertical = $state(false);
     let isDragging = false;
     let startX = 0;
     let startY = 0;
+    let toolbarEl;
+    let initialized = $state(false);
 
     onMount(() => {
         const saved = localStorage.getItem("kvoka-toolbar-settings");
@@ -35,7 +37,14 @@
             } catch (e) {
                 console.error("Failed to parse toolbar settings", e);
             }
+        } else {
+            if (toolbarEl) {
+                const rect = toolbarEl.getBoundingClientRect();
+                posX = (window.innerWidth - rect.width) / 2;
+                posY = window.innerHeight - rect.height - 10;
+            }
         }
+        initialized = true;
     });
 
     function saveToolbarSettings() {
@@ -124,10 +133,11 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+    bind:this={toolbarEl}
     class="toolbar"
     class:horizontal={!isVertical}
     onpointerdown={startDrag}
-    style="left: {posX}px; top: {posY}px;"
+    style="left: {posX}px; top: {posY}px; {initialized ? '' : 'visibility: hidden;'}"
 >
     <div class="drag-handle" title="Перетягнути панель">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

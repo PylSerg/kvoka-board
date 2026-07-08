@@ -671,10 +671,10 @@
                     stroke-linejoin="round"
                 >
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
-                <span>Імпортувати дошку</span>
+                <span>Завантажити дошку</span>
             </button>
 
             <button
@@ -695,10 +695,10 @@
                     stroke-linejoin="round"
                 >
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="17 8 12 3 7 8"></polyline>
-                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                <span>Експортувати дошку</span>
+                <span>Зберегти дошку</span>
             </button>
 
             <button
@@ -743,8 +743,8 @@
 <style>
     .menu-container {
         position: fixed;
-        top: 20px;
-        left: 20px;
+        bottom: 10px;
+        right: 10px;
         z-index: 1001;
         display: inline-block;
     }
@@ -793,8 +793,8 @@
 
     .dropdown-menu {
         position: absolute;
-        top: 52px;
-        left: 0;
+        bottom: 52px;
+        right: 0;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
@@ -808,14 +808,14 @@
         display: flex;
         flex-direction: column;
         gap: 2px;
-        animation: slideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        transform-origin: top left;
+        animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: bottom right;
     }
 
-    @keyframes slideDown {
+    @keyframes slideUp {
         from {
             opacity: 0;
-            transform: scale(0.9) translateY(-10px);
+            transform: scale(0.9) translateY(10px);
         }
         to {
             opacity: 1;
@@ -900,8 +900,8 @@
 
     .bg-submenu {
         position: absolute;
-        left: calc(100% + 8px);
-        top: 0;
+        right: calc(100% + 8px);
+        bottom: 0;
         background: rgba(255, 255, 255, 0.98);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
@@ -915,15 +915,15 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
-        animation: fadeInRight 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-        transform-origin: top left;
+        animation: fadeInLeft 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: bottom right;
         z-index: 1100;
     }
 
-    @keyframes fadeInRight {
+    @keyframes fadeInLeft {
         from {
             opacity: 0;
-            transform: translateX(-8px) scale(0.96);
+            transform: translateX(8px) scale(0.96);
         }
         to {
             opacity: 1;
