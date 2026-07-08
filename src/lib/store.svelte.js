@@ -17,3 +17,40 @@ export const boardData = $state({
     pdfFrames: [],        // Фрейми для експорту в PDF: { id, x, y, width, height, isVertical, number }
     isPdfMode: false      // Чи активний режим налаштування фреймів PDF
 });
+
+// --- Налаштування фону дошки ---
+
+const BG_STORAGE_KEY = 'kvoka-bg-settings';
+
+function loadBgSettings() {
+    try {
+        const saved = localStorage.getItem(BG_STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return {
+                overlay:      typeof parsed.overlay      === 'string' ? parsed.overlay      : 'grid',
+                scale:        typeof parsed.scale        === 'number' ? parsed.scale        : 40,
+                overlayColor: typeof parsed.overlayColor === 'string' ? parsed.overlayColor : '#d0d8e8',
+                bgColor:      typeof parsed.bgColor      === 'string' ? parsed.bgColor      : '#ffffff',
+            };
+        }
+    } catch (e) {
+        console.warn('Failed to load bg settings from localStorage', e);
+    }
+    return { overlay: 'grid', scale: 40, overlayColor: '#d0d8e8', bgColor: '#ffffff' };
+}
+
+export const bgSettings = $state(loadBgSettings());
+
+export function saveBgSettings() {
+    try {
+        localStorage.setItem(BG_STORAGE_KEY, JSON.stringify({
+            overlay:      bgSettings.overlay,
+            scale:        bgSettings.scale,
+            overlayColor: bgSettings.overlayColor,
+            bgColor:      bgSettings.bgColor,
+        }));
+    } catch (e) {
+        console.warn('Failed to save bg settings to localStorage', e);
+    }
+}

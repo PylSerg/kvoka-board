@@ -1,17 +1,20 @@
 <script>
     import { onMount } from "svelte";
-    import { boardData, saveState } from "$lib";
+    import { boardData, bgSettings, saveBgSettings, saveState } from "$lib";
 
     let isOpen = $state(false);
+    let isBgOpen = $state(false);
     let menuContainer;
     let fileInput;
 
     function toggleMenu() {
         isOpen = !isOpen;
+        if (!isOpen) isBgOpen = false;
     }
 
     function closeMenu() {
         isOpen = false;
+        isBgOpen = false;
     }
 
     onMount(() => {
@@ -135,6 +138,44 @@
             ];
         }
     }
+
+    // --- Фон ---
+    const overlayOptions = [
+        { value: 'none',     label: 'Немає',           icon: 'none' },
+        { value: 'grid',     label: 'Клітинка',         icon: 'grid' },
+        { value: 'lines',    label: 'Лінія',            icon: 'lines' },
+        { value: 'diagonal', label: 'Коса лінія',       icon: 'diagonal' },
+        { value: 'dots',     label: 'Точки',            icon: 'dots' },
+        { value: 'draft',    label: 'Для креслення',    icon: 'draft' },
+    ];
+
+    function handleOverlayColorChange(e) {
+        bgSettings.overlayColor = e.target.value;
+        saveBgSettings();
+    }
+
+    function handleBgColorChange(e) {
+        bgSettings.bgColor = e.target.value;
+        saveBgSettings();
+    }
+
+    function handleScaleInput(e) {
+        bgSettings.scale = Number(e.target.value);
+        saveBgSettings();
+    }
+
+    function selectOverlay(value) {
+        bgSettings.overlay = value;
+        saveBgSettings();
+    }
+
+    function resetBgSettings() {
+        bgSettings.overlay = 'none';
+        bgSettings.scale = 40;
+        bgSettings.overlayColor = '#d0d8e8';
+        bgSettings.bgColor = '#ffffff';
+        saveBgSettings();
+    }
 </script>
 
 <div class="menu-container" bind:this={menuContainer}>
@@ -155,6 +196,141 @@
 
     {#if isOpen}
         <div id="menu-dropdown" class="dropdown-menu">
+            <!-- Пункт Фон з підменю (першим) -->
+            <div class="submenu-wrapper" class:submenu-open={isBgOpen}>
+                <button
+                    id="bg-option"
+                    class="dropdown-item submenu-trigger"
+                    class:active={isBgOpen}
+                    onclick={() => isBgOpen = !isBgOpen}
+                >
+                    <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <path d="M3 9h18"></path>
+                        <path d="M9 21V9"></path>
+                    </svg>
+                    <span>Фон</span>
+                    <svg class="chevron" class:rotated={isBgOpen} xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+
+                {#if isBgOpen}
+                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                    <div
+                        id="bg-submenu"
+                        class="bg-submenu"
+                        onpointerdown={(e) => e.stopPropagation()}
+                    >
+                        <!-- Накладка -->
+                        <div class="submenu-section">
+                            <div class="submenu-label">Накладка</div>
+                            <div class="overlay-grid">
+                                {#each overlayOptions as opt}
+                                    <button
+                                        class="overlay-btn"
+                                        class:selected={bgSettings.overlay === opt.value}
+                                        onclick={() => selectOverlay(opt.value)}
+                                        title={opt.label}
+                                        aria-label={opt.label}
+                                    >
+                                        <span class="overlay-icon">
+                                            {#if opt.icon === 'none'}
+                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="17" x2="17" y2="5" stroke="currentColor" stroke-width="1.5"/></svg>
+                                            {:else if opt.icon === 'grid'}
+                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="8" x2="21" y2="8" stroke="currentColor" stroke-width="1"/><line x1="1" y1="14" x2="21" y2="14" stroke="currentColor" stroke-width="1"/><line x1="8" y1="1" x2="8" y2="21" stroke="currentColor" stroke-width="1"/><line x1="14" y1="1" x2="14" y2="21" stroke="currentColor" stroke-width="1"/></svg>
+                                            {:else if opt.icon === 'lines'}
+                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="7" x2="21" y2="7" stroke="currentColor" stroke-width="1"/><line x1="1" y1="11" x2="21" y2="11" stroke="currentColor" stroke-width="1"/><line x1="1" y1="15" x2="21" y2="15" stroke="currentColor" stroke-width="1"/></svg>
+                                            {:else if opt.icon === 'diagonal'}
+                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="7" x2="21" y2="7" stroke="currentColor" stroke-width="1"/><line x1="1" y1="14" x2="21" y2="14" stroke="currentColor" stroke-width="1"/><line x1="3" y1="1" x2="9" y2="21" stroke="currentColor" stroke-width="1"/><line x1="13" y1="1" x2="19" y2="21" stroke="currentColor" stroke-width="1"/></svg>
+                                            {:else if opt.icon === 'dots'}
+                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/><circle cx="15" cy="7" r="1.5" fill="currentColor"/><circle cx="7" cy="15" r="1.5" fill="currentColor"/><circle cx="15" cy="15" r="1.5" fill="currentColor"/><circle cx="11" cy="11" r="1.5" fill="currentColor"/></svg>
+                                            {:else if opt.icon === 'draft'}
+                                                <svg width="22" height="22" viewBox="0 0 22 22"><rect x="1" y="1" width="20" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="17" x2="21" y2="17" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="5" y1="1" x2="5" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="9" y1="1" x2="9" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="13" y1="1" x2="13" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="17" y1="1" x2="17" y2="21" stroke="currentColor" stroke-width="0.5" opacity="0.5"/><line x1="1" y1="1" x2="21" y2="21" stroke="currentColor" stroke-width="1"/><line x1="1" y1="21" x2="21" y2="1" stroke="currentColor" stroke-width="1"/></svg>
+                                            {/if}
+                                        </span>
+                                        <span class="overlay-label">{opt.label}</span>
+                                    </button>
+                                {/each}
+                            </div>
+                        </div>
+
+                        <!-- Масштаб накладки -->
+                        <div class="submenu-section">
+                            <div class="submenu-label">
+                                Масштаб накладки
+                                <span class="scale-value">{bgSettings.scale} px</span>
+                            </div>
+                            <div class="scale-row">
+                                <span class="scale-hint">10</span>
+                                <input
+                                    id="bg-scale-slider"
+                                    type="range"
+                                    min="10"
+                                    max="200"
+                                    step="5"
+                                    value={bgSettings.scale}
+                                    oninput={handleScaleInput}
+                                    class="scale-slider"
+                                    disabled={bgSettings.overlay === 'none'}
+                                />
+                                <span class="scale-hint">200</span>
+                            </div>
+                        </div>
+
+                        <!-- Колір накладки -->
+                        <div class="submenu-section">
+                            <div class="submenu-label">Колір накладки</div>
+                            <div class="color-row">
+                                <div
+                                    class="color-swatch-preview"
+                                    style="background: {bgSettings.overlayColor};"
+                                ></div>
+                                <label class="color-label">
+                                    <span class="color-hex">{bgSettings.overlayColor}</span>
+                                    <input
+                                        id="bg-overlay-color"
+                                        type="color"
+                                        value={bgSettings.overlayColor}
+                                        oninput={handleOverlayColorChange}
+                                        class="native-color-input"
+                                        disabled={bgSettings.overlay === 'none'}
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Колір фону -->
+                        <div class="submenu-section">
+                            <div class="submenu-label">Колір фону</div>
+                            <div class="color-row">
+                                <div
+                                    class="color-swatch-preview"
+                                    style="background: {bgSettings.bgColor}; border: 1px solid #ccc;"
+                                ></div>
+                                <label class="color-label">
+                                    <span class="color-hex">{bgSettings.bgColor}</span>
+                                    <input
+                                        id="bg-fill-color"
+                                        type="color"
+                                        value={bgSettings.bgColor}
+                                        oninput={handleBgColorChange}
+                                        class="native-color-input"
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Роздільник та кнопка Скинути -->
+                        <div class="divider"></div>
+                        <button class="reset-bg-btn" onclick={resetBgSettings}>Скинути</button>
+                    </div>
+                {/if}
+            </div>
+
+            <!-- Роздільник -->
+            <div class="divider"></div>
+
             <button
                 id="import-option"
                 class="dropdown-item"
@@ -258,7 +434,7 @@
         position: absolute;
         top: 52px;
         left: 0;
-        background: rgba(255, 255, 255, 0.9);
+        background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.5);
@@ -312,6 +488,11 @@
         background: rgba(0, 123, 255, 0.15);
     }
 
+    .dropdown-item.active {
+        background: rgba(0, 123, 255, 0.08);
+        color: #007bff;
+    }
+
     .item-icon {
         flex-shrink: 0;
         transition: transform 0.2s ease;
@@ -319,5 +500,265 @@
 
     .dropdown-item:hover .item-icon {
         transform: translateY(1px);
+    }
+
+    .divider {
+        height: 1px;
+        background: rgba(0, 0, 0, 0.06);
+        margin: 4px 8px;
+        flex-shrink: 0;
+    }
+
+    /* Submenu trigger */
+    .submenu-trigger {
+        position: relative;
+    }
+
+    .submenu-trigger span:first-of-type {
+        flex: 1;
+    }
+
+    .chevron {
+        margin-left: auto;
+        flex-shrink: 0;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        opacity: 0.5;
+    }
+
+    .chevron.rotated {
+        transform: rotate(90deg);
+        opacity: 1;
+    }
+
+    /* Bg Submenu panel */
+    .submenu-wrapper {
+        position: relative;
+    }
+
+    .bg-submenu {
+        position: absolute;
+        left: calc(100% + 8px);
+        top: 0;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.06);
+        border-radius: 14px;
+        padding: 14px;
+        width: 240px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        animation: fadeInRight 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: top left;
+        z-index: 1100;
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(-8px) scale(0.96);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+
+    .submenu-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .submenu-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Overlay picker grid */
+    .overlay-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+
+    .overlay-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 4px;
+        background: transparent;
+        border: 1.5px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #555;
+        transition: all 0.18s ease;
+        font-size: 10px;
+        font-weight: 500;
+    }
+
+    .overlay-btn:hover {
+        background: rgba(0, 123, 255, 0.07);
+        color: #007bff;
+        border-color: rgba(0, 123, 255, 0.2);
+    }
+
+    .overlay-btn.selected {
+        background: rgba(0, 123, 255, 0.12);
+        border-color: #007bff;
+        color: #007bff;
+    }
+
+    .overlay-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .overlay-label {
+        line-height: 1.2;
+        text-align: center;
+    }
+
+    /* Scale slider */
+    .scale-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .scale-hint {
+        font-size: 10px;
+        color: #aaa;
+        flex-shrink: 0;
+        width: 24px;
+        text-align: center;
+    }
+
+    .scale-slider {
+        flex: 1;
+        height: 4px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: linear-gradient(to right, #007bff 0%, #007bff calc((var(--val, 40) - 10) / 190 * 100%), #e0e0e0 calc((var(--val, 40) - 10) / 190 * 100%));
+        border-radius: 4px;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .scale-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #007bff;
+        border: 2px solid #fff;
+        box-shadow: 0 1px 4px rgba(0,123,255,0.4);
+        cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+
+    .scale-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+
+    .scale-slider:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .scale-value {
+        font-size: 11px;
+        color: #007bff;
+        font-weight: 600;
+    }
+
+    /* Color row */
+    .color-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .color-swatch-preview {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .color-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex: 1;
+        cursor: pointer;
+        gap: 6px;
+    }
+
+    .color-hex {
+        font-size: 12px;
+        color: #555;
+        font-family: monospace;
+        flex: 1;
+    }
+
+    .native-color-input {
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        background: none;
+        flex-shrink: 0;
+    }
+
+    .native-color-input::-webkit-color-swatch-wrapper {
+        padding: 0;
+    }
+
+    .native-color-input::-webkit-color-swatch {
+        border: 1.5px solid rgba(0, 0, 0, 0.15);
+        border-radius: 6px;
+    }
+
+    .native-color-input:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    /* Reset button */
+    .reset-bg-btn {
+        width: 100%;
+        padding: 8px;
+        background: transparent;
+        border: 1px solid rgba(255, 59, 48, 0.2);
+        border-radius: 8px;
+        color: #ff3b30;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 4px;
+    }
+
+    .reset-bg-btn:hover {
+        background: rgba(255, 59, 48, 0.08);
+        border-color: rgba(255, 59, 48, 0.4);
     }
 </style>

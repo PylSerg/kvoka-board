@@ -1,6 +1,6 @@
 <script>
     import { onMount, untrack } from "svelte";
-    import { brushSettings, boardData, saveState } from "$lib";
+    import { brushSettings, boardData, bgSettings, saveState } from "$lib";
     import SelectionMenu from "./SelectionMenu.svelte";
     import { drawShape } from "./shapeRenderer.js";
 
@@ -160,6 +160,11 @@
         boardData.zoom;
         boardData.offsetX;
         boardData.offsetY;
+        // Слідкуємо за налаштуваннями фону
+        bgSettings.overlay;
+        bgSettings.scale;
+        bgSettings.overlayColor;
+        bgSettings.bgColor;
         redraw();
     });
 
@@ -219,12 +224,12 @@
 
         ctx.clearRect(0, 0, 10000, 10000);
 
-        // 1. Малюємо білий фон
-        ctx.fillStyle = "#ffffff";
+        // 1. Малюємо фон
+        ctx.fillStyle = bgSettings.bgColor;
         ctx.fillRect(0, 0, 10000, 10000);
 
-        // 2. Малюємо сітку
-        drawGrid();
+        // 2. Малюємо накладку
+        drawOverlay();
 
         // 3. Застосовуємо трансформації для ліній
         ctx.save();
@@ -241,7 +246,7 @@
             offscreenCtx.scale(boardData.zoom, boardData.zoom);
 
             boardData.lines.forEach((line) => {
-                const isEraser = line.tool === "eraser" || line.color === "#ffffff";
+                const isEraser = line.tool === "eraser";
 
                 if (isEraser) {
                     offscreenCtx.globalCompositeOperation = "destination-out";
@@ -365,30 +370,127 @@
         }
     }
 
-    function drawGrid() {
-        const step = 40 * boardData.zoom;
+    function drawOverlay() {
+        const type = bgSettings.overlay;
+        if (type === 'none') return;
 
-        // Математика для "нескінченної" сітки
+        const step = bgSettings.scale * boardData.zoom;
+        if (step < 2) return; // Занадто малий крок — не малюємо
+
         const startXGrid = boardData.offsetX % step;
         const startYGrid = boardData.offsetY % step;
+        const color = bgSettings.overlayColor;
 
         ctx.beginPath();
-        ctx.strokeStyle = "#f0f0f0"; // Світло-сірий для ліній клітинки
+        ctx.strokeStyle = color;
         ctx.lineWidth = 1;
 
-        // Вертикальні лінії
-        for (let x = startXGrid; x < canvas.width; x += step) {
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, canvas.height);
-        }
+        if (type === 'grid') {
+            // Вертикальні лінії
+            for (let x = startXGrid; x < canvas.width; x += step) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            // Горизонтальні лінії
+            for (let y = startYGrid; y < canvas.height; y += step) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+        } else if (type === 'lines') {
+            // Тільки горизонтальні лінії
+            for (let y = startYGrid; y < canvas.height; y += step) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+        } else if (type === 'diagonal') {
+            // Для письма в молодшій школі (коса лінія)
+            const smallHeight = step; // Висота робочого рядка
+            const gap = step * 2;     // Відстань між рядками
+            const patternHeight = smallHeight + gap;
 
-        // Горизонтальні лінії
-        for (let y = startYGrid; y < canvas.height; y += step) {
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
-        }
+            // Базовий зсув по Y для горизонтальних ліній
+            const startY = (boardData.offsetY % patternHeight + patternHeight) % patternHeight;
 
-        ctx.stroke();
+            // Горизонтальні лінії
+            for (let y = startY - patternHeight; y < canvas.height + patternHeight; y += patternHeight) {
+                // Верхня лінія робочого рядка
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                
+                // Нижня лінія робочого рядка
+                ctx.moveTo(0, y + smallHeight);
+                ctx.lineTo(canvas.width, y + smallHeight);
+            }
+            ctx.stroke();
+
+            // Косі лінії — нахил ~65° до горизонталі (нахил вправо "/")
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            
+            const diagStep = step * 2.5; // Відстань між косими лініями
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            // dx — зсув по x за всю висоту екрана (tan(25°) ≈ 0.46)
+            const dx = h * 0.46; 
+            
+            // Зсув початку з урахуванням прокрутки (X = X0 - Y * 0.46)
+            const diagShift = boardData.offsetX + boardData.offsetY * 0.46;
+            const diagOffset = (diagShift % diagStep + diagStep) % diagStep;
+            
+            for (let x = diagOffset - diagStep; x < w + dx + diagStep; x += diagStep) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x - dx, h);
+            }
+            ctx.stroke();
+        } else if (type === 'dots') {
+            // Крапки у вузлах сітки
+            const dotRadius = Math.max(1, step * 0.06);
+            ctx.fillStyle = color;
+            for (let x = startXGrid; x < canvas.width + step; x += step) {
+                for (let y = startYGrid; y < canvas.height + step; y += step) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, dotRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        } else if (type === 'draft') {
+            // Сітка для креслення: основна сітка + дрібніша підсітка
+            const subStep = step / 5;
+            // Дрібна підсітка
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.globalAlpha = 0.4;
+            ctx.lineWidth = 0.5;
+            const subStartX = boardData.offsetX % subStep;
+            const subStartY = boardData.offsetY % subStep;
+            for (let x = subStartX; x < canvas.width; x += subStep) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            for (let y = subStartY; y < canvas.height; y += subStep) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            // Основна сітка
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            for (let x = startXGrid; x < canvas.width; x += step) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            for (let y = startYGrid; y < canvas.height; y += step) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+            }
+            ctx.stroke();
+        }
     }
 
     function resizeCanvas() {
