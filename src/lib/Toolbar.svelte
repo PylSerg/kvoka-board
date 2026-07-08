@@ -1,4 +1,5 @@
 <script>
+    import { onMount } from "svelte";
     import { brushSettings, boardData, undo, redo, clearAll, saveState } from "$lib";
     import orientationVerticalIcon from "$lib/assets/orientation-vertical.png";
     import orientationHorizontalIcon from "$lib/assets/orientation-horizontal.png";
@@ -22,6 +23,28 @@
     let isDragging = false;
     let startX = 0;
     let startY = 0;
+
+    onMount(() => {
+        const saved = localStorage.getItem("kvoka-toolbar-settings");
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (typeof parsed.posX === "number") posX = parsed.posX;
+                if (typeof parsed.posY === "number") posY = parsed.posY;
+                if (typeof parsed.isVertical === "boolean") isVertical = parsed.isVertical;
+            } catch (e) {
+                console.error("Failed to parse toolbar settings", e);
+            }
+        }
+    });
+
+    function saveToolbarSettings() {
+        localStorage.setItem("kvoka-toolbar-settings", JSON.stringify({
+            posX,
+            posY,
+            isVertical
+        }));
+    }
 
     function startDrag(e) {
         if (
@@ -51,10 +74,12 @@
         window.removeEventListener("pointermove", handleDrag);
         window.removeEventListener("pointerup", stopDrag);
         window.removeEventListener("pointercancel", stopDrag);
+        saveToolbarSettings();
     }
 
     function toggleOrientation() {
         isVertical = !isVertical;
+        saveToolbarSettings();
     }
 
     function zoomIn() {

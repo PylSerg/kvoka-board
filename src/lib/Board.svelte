@@ -132,9 +132,19 @@
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
         canvas.addEventListener("wheel", handleWheel, { passive: false });
+
+        const handleBeforeUnload = (e) => {
+            if (boardData.lines.length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+
         return () => {
             window.removeEventListener("resize", resizeCanvas);
             canvas.removeEventListener("wheel", handleWheel);
+            window.removeEventListener("beforeunload", handleBeforeUnload);
         };
     });
 
