@@ -48,12 +48,10 @@
             title: "3D фігури",
             shapes: [
                 // Для 3D генеруємо спрощені іконки (ізометрія/псевдо-3D)
-                { id: "sphere", name: "Сфера", icon: `${iconBase}<circle cx="12" cy="12" r="8" /><ellipse cx="12" cy="12" rx="8" ry="3" stroke-dasharray="2 2" /><ellipse cx="12" cy="12" rx="3" ry="8" stroke-dasharray="2 2" />${iconEnd}` },
                 { id: "cube", name: "Куб", icon: `${iconBase}<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" />${iconEnd}` },
                 { id: "parallelepiped", name: "Паралелепіпед", icon: `${iconBase}<polygon points="4 8 16 8 20 12 8 12" /><polygon points="4 8 4 18 8 22 8 12" /><polygon points="8 22 20 18 20 12 8 12" />${iconEnd}` },
                 { id: "cylinder", name: "Циліндр", icon: `${iconBase}<ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v12c0 1.66 3.58 3 8 3s8-1.34 8-3V6" />${iconEnd}` },
-                { id: "cone", name: "Конус", icon: `${iconBase}<ellipse cx="12" cy="18" rx="8" ry="3" /><path d="M4 18L12 4l8 14" />${iconEnd}` },
-                { id: "pyramid", name: "Піраміда", icon: `${iconBase}<polygon points="12 3 4 18 12 21" /><polygon points="12 3 20 18 12 21" />${iconEnd}` }
+                { id: "cone", name: "Конус", icon: `${iconBase}<ellipse cx="12" cy="18" rx="8" ry="3" /><path d="M4 18L12 4l8 14" />${iconEnd}` }
             ]
         }
     ];
