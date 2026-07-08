@@ -1,6 +1,6 @@
 <script>
     import { onMount } from "svelte";
-    import { boardData, bgSettings, saveBgSettings, saveState } from "$lib";
+    import { boardData, bgSettings, saveBgSettings, saveState, deleteBoardFromDB } from "$lib";
 
     let isOpen = $state(false);
     let isBgOpen = $state(false);
@@ -142,6 +142,22 @@
                     number: 1,
                 },
             ];
+        }
+    }
+
+    async function exitBoard() {
+        if (confirm("Ви впевнені, що хочете вийти? Поточна дошка буде очищена і видалена зі збережених.")) {
+            try {
+                await deleteBoardFromDB();
+                boardData.lines = [];
+                boardData.zoom = 1;
+                boardData.offsetX = 0;
+                boardData.offsetY = 0;
+                closeMenu();
+            } catch (err) {
+                console.error("Failed to exit and clear db:", err);
+                alert("Помилка при виході.");
+            }
         }
     }
 
@@ -727,6 +743,34 @@
                     <circle cx="10" cy="9" r="1"></circle>
                 </svg>
                 <span>Експортувати як PDF</span>
+            </button>
+
+            <!-- Роздільник -->
+            <div class="divider"></div>
+
+            <button
+                id="exit-option"
+                class="dropdown-item"
+                onclick={exitBoard}
+                style="color: #dc3545;"
+            >
+                <svg
+                    class="item-icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Вийти</span>
             </button>
         </div>
     {/if}

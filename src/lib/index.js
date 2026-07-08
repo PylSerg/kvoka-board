@@ -5,3 +5,4 @@ export { default as PdfExportPanel } from './PdfExportPanel.svelte';
 export { default as PdfFrameOverlay } from './PdfFrameOverlay.svelte';
 export { brushSettings, boardData, bgSettings, saveBgSettings } from './store.svelte.js';
 export { saveState, undo, redo, clearAll } from './history.svelte.js';
+export { saveBoardToDB, loadBoardFromDB, deleteBoardFromDB } from './idb.js';
