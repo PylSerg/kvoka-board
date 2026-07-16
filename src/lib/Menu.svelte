@@ -154,6 +154,7 @@
                 boardData.offsetX = 0;
                 boardData.offsetY = 0;
                 closeMenu();
+                window.close();
             } catch (err) {
                 console.error("Failed to exit and clear db:", err);
                 alert("Помилка при виході.");
@@ -788,7 +789,7 @@
     .menu-container {
         position: fixed;
         bottom: 10px;
-        right: 10px;
+        left: 10px;
         z-index: 1001;
         display: inline-block;
     }
@@ -838,7 +839,7 @@
     .dropdown-menu {
         position: absolute;
         bottom: 52px;
-        right: 0;
+        left: 0;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
@@ -853,7 +854,7 @@
         flex-direction: column;
         gap: 2px;
         animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        transform-origin: bottom right;
+        transform-origin: bottom left;
     }
 
     @keyframes slideUp {
@@ -944,7 +945,7 @@
 
     .bg-submenu {
         position: absolute;
-        right: calc(100% + 8px);
+        left: calc(100% + 8px);
         bottom: 0;
         background: rgba(255, 255, 255, 0.98);
         backdrop-filter: blur(16px);
@@ -960,7 +961,7 @@
         flex-direction: column;
         gap: 16px;
         animation: fadeInLeft 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-        transform-origin: bottom right;
+        transform-origin: bottom left;
         z-index: 1100;
     }
 
