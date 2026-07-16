@@ -69,6 +69,8 @@
     }
 
     function triggerImport() {
+        isBgOpen = false;
+        isPanelsOpen = false;
         fileInput.click();
     }
 
@@ -246,6 +248,53 @@
     let editingPanelId = $state(null);
     let editingName = $state("");
     let deletingPanelId = $state(null);
+    let draggedPanelId = $state(null);
+
+    function handleDragStartPanel(e, panelId) {
+        draggedPanelId = panelId;
+        if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(panelId));
+            // Приховуємо стандартний ghost браузера
+            const ghost = document.createElement('canvas');
+            ghost.width = 1;
+            ghost.height = 1;
+            document.body.appendChild(ghost);
+            e.dataTransfer.setDragImage(ghost, 0, 0);
+            requestAnimationFrame(() => document.body.removeChild(ghost));
+        }
+    }
+
+    function handleDragEnterPanel(e, targetPanelId) {
+        if (draggedPanelId && draggedPanelId !== targetPanelId) {
+            const panels = customPanelsData.panels;
+            const fromIndex = panels.findIndex(p => p.id === draggedPanelId);
+            const toIndex = panels.findIndex(p => p.id === targetPanelId);
+            if (fromIndex === -1 || toIndex === -1) return;
+            const newPanels = [...panels];
+            newPanels.splice(fromIndex, 1);
+            newPanels.splice(toIndex, 0, panels[fromIndex]);
+            customPanelsData.panels = newPanels;
+        }
+    }
+
+    function handleDragOverPanel(e) {
+        e.preventDefault();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'move';
+        }
+    }
+
+    function handleDropPanel(e) {
+        e.preventDefault();
+        savePanelsData();
+        draggedPanelId = null;
+    }
+
+    function handleDragEndPanel() {
+        savePanelsData();
+        draggedPanelId = null;
+    }
 
     function startRename(panel, e) {
         e.stopPropagation();
@@ -315,7 +364,7 @@
                     id="bg-option"
                     class="dropdown-item submenu-trigger"
                     class:active={isBgOpen}
-                    onclick={() => (isBgOpen = !isBgOpen)}
+                    onclick={() => { isPanelsOpen = false; isBgOpen = !isBgOpen; }}
                 >
                     <svg
                         class="item-icon"
@@ -752,7 +801,7 @@
                 <button
                     class="dropdown-item submenu-trigger"
                     class:active={isPanelsOpen}
-                    onclick={() => (isPanelsOpen = !isPanelsOpen)}
+                    onclick={() => { isBgOpen = false; isPanelsOpen = !isPanelsOpen; }}
                 >
                     <svg
                         class="item-icon"
@@ -806,7 +855,18 @@
 
                             {#each customPanelsData.panels as panel (panel.id)}
                             <!-- svelte-ignore a11y_no_static_element_interactions -->
-                            <div class="panel-item" onclick={() => { if (editingPanelId !== panel.id) togglePanelVisibility(panel); }} class:panel-hidden={!panel.isVisible}>
+                            <div
+                                class="panel-item"
+                                class:panel-hidden={!panel.isVisible}
+                                class:is-dragging={draggedPanelId === panel.id}
+                                draggable="true"
+                                ondragstart={(e) => handleDragStartPanel(e, panel.id)}
+                                ondragenter={(e) => handleDragEnterPanel(e, panel.id)}
+                                ondragover={handleDragOverPanel}
+                                ondrop={handleDropPanel}
+                                ondragend={handleDragEndPanel}
+                                onclick={() => { if (editingPanelId !== panel.id) togglePanelVisibility(panel); }}
+                            >
                                 {#if editingPanelId === panel.id}
                                     <!-- svelte-ignore a11y_autofocus -->
                                     <input
@@ -1017,6 +1077,11 @@
         box-shadow: 0 0 12px rgba(0, 123, 255, 0.4);
     }
 
+    .panel-item.is-dragging {
+        opacity: 0.4;
+        outline: 1.5px dashed rgba(0, 123, 255, 0.5);
+    }
+
     .panel-item {
         display: flex;
         align-items: center;
@@ -1024,7 +1089,7 @@
         padding: 6px 8px;
         border-radius: 8px;
         cursor: pointer;
-        transition: background 0.15s ease;
+        transition: background 0.15s ease, opacity 0.15s ease;
     }
 
     .panel-item:hover {
