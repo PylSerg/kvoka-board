@@ -228,10 +228,9 @@
     }
 
     function deletePanel(id) {
-        if (confirm("Ви дійсно хочете видалити цю панель назавжди?")) {
-            customPanelsData.panels = customPanelsData.panels.filter(p => p.id !== id);
-            savePanelsData();
-        }
+        customPanelsData.panels = customPanelsData.panels.filter(p => p.id !== id);
+        savePanelsData();
+        deletingPanelId = null;
     }
 
     function togglePanelVisibility(panel) {
@@ -244,8 +243,41 @@
         savePanelsData();
     }
 
-    function handlePanelNameChange() {
-        savePanelsData();
+    let editingPanelId = $state(null);
+    let editingName = $state("");
+    let deletingPanelId = $state(null);
+
+    function startRename(panel, e) {
+        e.stopPropagation();
+        editingPanelId = panel.id;
+        editingName = panel.name;
+    }
+
+    function commitRename(panel) {
+        const trimmed = editingName.trim();
+        if (trimmed !== "") {
+            panel.name = trimmed;
+            savePanelsData();
+        }
+        editingPanelId = null;
+    }
+
+    function cancelRename() {
+        editingPanelId = null;
+    }
+
+    function requestDelete(id, e) {
+        e.stopPropagation();
+        deletingPanelId = id;
+    }
+
+    function confirmDelete() {
+        deletePanel(deletingPanelId);
+    }
+
+    function cancelDelete(e) {
+        e?.stopPropagation();
+        deletingPanelId = null;
     }
 </script>
 
@@ -761,42 +793,54 @@
                         class="bg-submenu panels-submenu"
                         onpointerdown={(e) => e.stopPropagation()}
                     >
-                        <button class="reset-bg-btn" style="margin-bottom: 8px;" onclick={createPanel}>
+                        <button class="create-panel-btn" onclick={createPanel}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                             Створити панель
                         </button>
                         <div class="divider"></div>
                         
                         <div class="panels-list">
-                            <div class="panel-item">
-                                <span class="panel-name-static">Основна панель</span>
-                                <button class="panel-visibility-btn" class:hidden={!customPanelsData.isMainToolbarVisible} onclick={toggleMainToolbarVisibility} title={customPanelsData.isMainToolbarVisible ? 'Сховати' : 'Показати'}>
-                                    {#if customPanelsData.isMainToolbarVisible}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    {:else}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                                    {/if}
-                                </button>
-                                <div class="panel-delete-placeholder"></div>
+                            <div class="panel-item" onclick={toggleMainToolbarVisibility} title={customPanelsData.isMainToolbarVisible ? 'Сховати' : 'Показати'} class:panel-hidden={!customPanelsData.isMainToolbarVisible}>
+                                <span class="panel-name-text">Основна панель</span>
                             </div>
 
                             {#each customPanelsData.panels as panel (panel.id)}
-                            <div class="panel-item">
-                                <input 
-                                    type="text" 
-                                    class="panel-name-input" 
-                                    bind:value={panel.name} 
-                                    onchange={handlePanelNameChange} 
-                                />
-                                <button class="panel-visibility-btn" class:hidden={!panel.isVisible} onclick={() => togglePanelVisibility(panel)} title={panel.isVisible ? 'Сховати' : 'Показати'}>
-                                    {#if panel.isVisible}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    {:else}
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                                    {/if}
-                                </button>
-                                <button class="panel-delete-btn" onclick={() => deletePanel(panel.id)} title="Видалити назавжди">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                </button>
+                            <!-- svelte-ignore a11y_no_static_element_interactions -->
+                            <div class="panel-item" onclick={() => { if (editingPanelId !== panel.id) togglePanelVisibility(panel); }} class:panel-hidden={!panel.isVisible}>
+                                {#if editingPanelId === panel.id}
+                                    <!-- svelte-ignore a11y_autofocus -->
+                                    <input
+                                        class="panel-name-input"
+                                        type="text"
+                                        bind:value={editingName}
+                                        autofocus
+                                        onclick={(e) => e.stopPropagation()}
+                                        onkeydown={(e) => { if (e.key === 'Enter') commitRename(panel); else if (e.key === 'Escape') cancelRename(); }}
+                                        onblur={() => commitRename(panel)}
+                                    />
+                                {:else}
+                                    <span class="panel-name-text">{panel.name}</span>
+                                {/if}
+                                <div class="panel-actions">
+                                    <button class="panel-icon-btn" onclick={(e) => startRename(panel, e)} title="Перейменувати">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                    <div class="panel-delete-wrap">
+                                        <button class="panel-icon-btn panel-delete-btn" onclick={(e) => requestDelete(panel.id, e)} title="Видалити">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        </button>
+                                        {#if deletingPanelId === panel.id}
+                                            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                                            <div class="delete-popup" onpointerdown={(e) => e.stopPropagation()}>
+                                                <div class="delete-popup-text">Видалити панель?</div>
+                                                <div class="delete-popup-actions">
+                                                    <button class="del-confirm-btn" onclick={confirmDelete}>Так</button>
+                                                    <button class="del-cancel-btn" onclick={cancelDelete}>Ні</button>
+                                                </div>
+                                            </div>
+                                        {/if}
+                                    </div>
+                                </div>
                             </div>
                         {/each}
                         </div>
@@ -973,65 +1017,176 @@
         box-shadow: 0 0 12px rgba(0, 123, 255, 0.4);
     }
 
-    .panel-name-static {
-        flex-grow: 1;
-        padding: 4px;
-        font-size: 14px;
-        color: #555;
+    .panel-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s ease;
     }
 
-    .panel-delete-placeholder {
-        width: 22px;
-        height: 22px;
+    .panel-item:hover {
+        background: rgba(0, 123, 255, 0.06);
+    }
+
+    .panel-item.panel-hidden {
+        opacity: 0.45;
+    }
+
+    .panel-name-text {
+        flex-grow: 1;
+        font-size: 13px;
+        font-weight: 500;
+        color: #333;
+        white-space: normal;
+        word-break: break-word;
+        line-height: 1.35;
     }
 
     .panel-name-input {
         flex-grow: 1;
-        padding: 4px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 14px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #333;
+        background: rgba(0, 123, 255, 0.06);
+        border: 1.5px solid rgba(0, 123, 255, 0.35);
+        border-radius: 6px;
+        padding: 2px 6px;
+        outline: none;
+        line-height: 1.4;
+        min-width: 0;
+        width: 100%;
+        box-sizing: border-box;
+        transition: border-color 0.15s;
     }
 
     .panel-name-input:focus {
         border-color: #007bff;
+        background: rgba(0, 123, 255, 0.09);
     }
 
-    .panel-visibility-btn {
+    .panel-actions {
+        display: flex;
+        gap: 2px;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .panel-delete-wrap {
+        position: relative;
+    }
+
+    .delete-popup {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 1200;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-width: 150px;
+    }
+
+    .delete-popup-text {
+        font-size: 13px;
+        color: #333;
+        text-align: center;
+        font-weight: 500;
+    }
+
+    .delete-popup-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .del-confirm-btn,
+    .del-cancel-btn {
+        flex: 1;
+        padding: 7px 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+
+    .del-confirm-btn {
+        background-color: #ffebee;
+        color: #d32f2f;
+    }
+
+    .del-confirm-btn:hover {
+        background-color: #ffcdd2;
+    }
+
+    .del-cancel-btn {
+        background-color: #f5f5f5;
+        color: #333;
+    }
+
+    .del-cancel-btn:hover {
+        background-color: #e0e0e0;
+    }
+
+    .panel-icon-btn {
         background: none;
         border: none;
-        color: #555;
+        color: #6c757d;
         cursor: pointer;
         padding: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 4px;
+        border-radius: 5px;
+        width: 24px;
+        height: 24px;
+        transition: background 0.15s, color 0.15s;
     }
 
-    .panel-visibility-btn:hover {
-        background: #e2e6ea;
+    .panel-icon-btn:hover {
+        background: rgba(0, 123, 255, 0.1);
+        color: #007bff;
     }
 
-    .panel-visibility-btn.hidden {
-        color: #999;
-    }
-
-    .panel-delete-btn {
-        background: none;
-        border: none;
-        color: #555;
-        cursor: pointer;
-        padding: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-    }
-
-    .panel-delete-btn:hover {
+    .panel-icon-btn.panel-delete-btn:hover {
         background: rgba(220, 53, 69, 0.1);
         color: #dc3545;
+    }
+
+    .create-panel-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: rgba(25, 135, 84, 0.08);
+        border: 1px solid rgba(25, 135, 84, 0.3);
+        border-radius: 8px;
+        color: #198754;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .create-panel-btn:hover {
+        background: rgba(25, 135, 84, 0.15);
+        border-color: rgba(25, 135, 84, 0.5);
+        color: #146c43;
+    }
+
+    .create-panel-btn:active {
+        background: rgba(25, 135, 84, 0.22);
+        transform: scale(0.98);
     }
 
     .dropdown-menu {
