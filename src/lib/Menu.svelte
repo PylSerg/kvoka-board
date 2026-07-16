@@ -1,20 +1,25 @@
 <script>
     import { onMount } from "svelte";
-    import { boardData, bgSettings, saveBgSettings, saveState, deleteBoardFromDB } from "$lib";
+    import { boardData, bgSettings, saveBgSettings, saveState, deleteBoardFromDB, customPanelsData, savePanelsToDB } from "$lib";
 
     let isOpen = $state(false);
     let isBgOpen = $state(false);
+    let isPanelsOpen = $state(false);
     let menuContainer;
     let fileInput;
 
     function toggleMenu() {
         isOpen = !isOpen;
-        if (!isOpen) isBgOpen = false;
+        if (!isOpen) {
+            isBgOpen = false;
+            isPanelsOpen = false;
+        }
     }
 
     function closeMenu() {
         isOpen = false;
         isBgOpen = false;
+        isPanelsOpen = false;
     }
 
     onMount(() => {
@@ -198,6 +203,49 @@
         bgSettings.overlayColor = "#d0d8e8";
         bgSettings.bgColor = "#ffffff";
         saveBgSettings();
+    }
+
+    // --- Панелі ---
+    function savePanelsData() {
+        savePanelsToDB({
+            panels: $state.snapshot(customPanelsData.panels),
+            isMainToolbarVisible: customPanelsData.isMainToolbarVisible
+        }).catch(console.error);
+    }
+
+    function createPanel() {
+        const newPanel = {
+            id: Date.now() + Math.random(),
+            name: "Нова панель",
+            posX: window.innerWidth / 2 - 30,
+            posY: window.innerHeight / 2 - 100,
+            isVertical: true,
+            isVisible: true,
+            tools: []
+        };
+        customPanelsData.panels = [...customPanelsData.panels, newPanel];
+        savePanelsData();
+    }
+
+    function deletePanel(id) {
+        if (confirm("Ви дійсно хочете видалити цю панель назавжди?")) {
+            customPanelsData.panels = customPanelsData.panels.filter(p => p.id !== id);
+            savePanelsData();
+        }
+    }
+
+    function togglePanelVisibility(panel) {
+        panel.isVisible = !panel.isVisible;
+        savePanelsData();
+    }
+
+    function toggleMainToolbarVisibility() {
+        customPanelsData.isMainToolbarVisible = !customPanelsData.isMainToolbarVisible;
+        savePanelsData();
+    }
+
+    function handlePanelNameChange() {
+        savePanelsData();
     }
 </script>
 
@@ -667,6 +715,95 @@
                 {/if}
             </div>
 
+            <!-- Пункт Панелі з підменю -->
+            <div class="submenu-wrapper" class:submenu-open={isPanelsOpen}>
+                <button
+                    class="dropdown-item submenu-trigger"
+                    class:active={isPanelsOpen}
+                    onclick={() => (isPanelsOpen = !isPanelsOpen)}
+                >
+                    <svg
+                        class="item-icon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="3" x2="9" y2="21"></line>
+                    </svg>
+                    <span>Панелі</span>
+                    <svg
+                        class="chevron"
+                        class:rotated={isPanelsOpen}
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+
+                {#if isPanelsOpen}
+                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                    <div
+                        class="bg-submenu panels-submenu"
+                        onpointerdown={(e) => e.stopPropagation()}
+                    >
+                        <button class="reset-bg-btn" style="margin-bottom: 8px;" onclick={createPanel}>
+                            Створити панель
+                        </button>
+                        <div class="divider"></div>
+                        
+                        <div class="panels-list">
+                            <div class="panel-item">
+                                <span class="panel-name-static">Основна панель</span>
+                                <button class="panel-visibility-btn" class:hidden={!customPanelsData.isMainToolbarVisible} onclick={toggleMainToolbarVisibility} title={customPanelsData.isMainToolbarVisible ? 'Сховати' : 'Показати'}>
+                                    {#if customPanelsData.isMainToolbarVisible}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    {:else}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    {/if}
+                                </button>
+                                <div class="panel-delete-placeholder"></div>
+                            </div>
+
+                            {#each customPanelsData.panels as panel (panel.id)}
+                            <div class="panel-item">
+                                <input 
+                                    type="text" 
+                                    class="panel-name-input" 
+                                    bind:value={panel.name} 
+                                    onchange={handlePanelNameChange} 
+                                />
+                                <button class="panel-visibility-btn" class:hidden={!panel.isVisible} onclick={() => togglePanelVisibility(panel)} title={panel.isVisible ? 'Сховати' : 'Показати'}>
+                                    {#if panel.isVisible}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    {:else}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    {/if}
+                                </button>
+                                <button class="panel-delete-btn" onclick={() => deletePanel(panel.id)} title="Видалити назавжди">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        {/each}
+                        </div>
+                    </div>
+                {/if}
+            </div>
+
             <!-- Роздільник -->
             <div class="divider"></div>
 
@@ -834,6 +971,67 @@
         color: #ffffff;
         border-color: #007bff;
         box-shadow: 0 0 12px rgba(0, 123, 255, 0.4);
+    }
+
+    .panel-name-static {
+        flex-grow: 1;
+        padding: 4px;
+        font-size: 14px;
+        color: #555;
+    }
+
+    .panel-delete-placeholder {
+        width: 22px;
+        height: 22px;
+    }
+
+    .panel-name-input {
+        flex-grow: 1;
+        padding: 4px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .panel-name-input:focus {
+        border-color: #007bff;
+    }
+
+    .panel-visibility-btn {
+        background: none;
+        border: none;
+        color: #555;
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+    }
+
+    .panel-visibility-btn:hover {
+        background: #e2e6ea;
+    }
+
+    .panel-visibility-btn.hidden {
+        color: #999;
+    }
+
+    .panel-delete-btn {
+        background: none;
+        border: none;
+        color: #555;
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+    }
+
+    .panel-delete-btn:hover {
+        background: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
     }
 
     .dropdown-menu {

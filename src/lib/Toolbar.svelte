@@ -1,6 +1,6 @@
 <script>
     import { onMount } from "svelte";
-    import { brushSettings, boardData, undo, redo, clearAll, saveState } from "$lib";
+    import { brushSettings, boardData, undo, redo, clearAll, saveState, customPanelsData, savePanelsToDB } from "$lib";
     import orientationVerticalIcon from "$lib/assets/orientation-vertical.png";
     import orientationHorizontalIcon from "$lib/assets/orientation-horizontal.png";
     import moveIcon from "$lib/assets/hand-cursor.png";
@@ -128,6 +128,14 @@
         if (boardData.selectedLineIds.length > 0) {
             saveState();
         }
+    }
+
+    function closeToolbar() {
+        customPanelsData.isMainToolbarVisible = false;
+        savePanelsToDB({
+            panels: $state.snapshot(customPanelsData.panels),
+            isMainToolbarVisible: false
+        }).catch(console.error);
     }
 </script>
 
@@ -264,6 +272,12 @@
     <hr />
 
     <ClearConfirm {isVertical} onConfirm={clearAll} />
+
+    <hr />
+
+    <button onclick={closeToolbar} title="Закрити панель (Сховати)" class="action-btn delete-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
 </div>
 
 <style lang="scss">

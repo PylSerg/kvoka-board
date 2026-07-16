@@ -54,3 +54,9 @@ export function saveBgSettings() {
         console.warn('Failed to save bg settings to localStorage', e);
     }
 }
+
+// --- Користувацькі панелі інструментів ---
+export const customPanelsData = $state({
+    panels: [],
+    isMainToolbarVisible: true
+});

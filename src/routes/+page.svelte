@@ -1,6 +1,6 @@
 <script>
     import { onMount, onDestroy } from "svelte";
-    import { Board, Toolbar, Menu, PdfExportPanel, PdfFrameOverlay, boardData, loadBoardFromDB, saveBoardToDB, saveState } from "$lib";
+    import { Board, Toolbar, Menu, PdfExportPanel, PdfFrameOverlay, boardData, loadBoardFromDB, saveBoardToDB, saveState, customPanelsData, loadPanelsFromDB, CustomPanel } from "$lib";
 
     let autoSaveInterval;
 
@@ -18,6 +18,21 @@
             }
         } catch (err) {
             console.error("Failed to load board from IndexedDB", err);
+        }
+
+        try {
+            const savedPanels = await loadPanelsFromDB();
+            if (Array.isArray(savedPanels)) {
+                customPanelsData.panels = savedPanels;
+                customPanelsData.isMainToolbarVisible = true;
+            } else if (savedPanels && typeof savedPanels === 'object') {
+                customPanelsData.panels = savedPanels.panels || [];
+                if (typeof savedPanels.isMainToolbarVisible === 'boolean') {
+                    customPanelsData.isMainToolbarVisible = savedPanels.isMainToolbarVisible;
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load custom panels", err);
         }
 
         autoSaveInterval = setInterval(() => {
@@ -41,10 +56,19 @@
     });
 </script>
 
+<svelte:window oncontextmenu={(e) => e.preventDefault()} />
+
 <main>
     <Board />
     {#if !boardData.isPdfMode}
-        <Toolbar />
+        {#if customPanelsData.isMainToolbarVisible}
+            <Toolbar />
+        {/if}
+        {#each customPanelsData.panels as panel (panel.id)}
+            {#if panel.isVisible}
+                <CustomPanel {panel} />
+            {/if}
+        {/each}
         <Menu />
     {:else}
         <PdfExportPanel />
