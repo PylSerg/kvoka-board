@@ -149,8 +149,18 @@
         const ly = -dxCanvas * sinA + dyCanvas * cosA;
 
         if (activeAction.type === "move") {
-            plane.x = activeAction.initialX + dxCanvas;
-            plane.y = activeAction.initialY + dyCanvas;
+            let newX = activeAction.initialX + dxCanvas;
+            let newY = activeAction.initialY + dyCanvas;
+
+            // Snap to grid
+            if (bgSettings.overlay !== "none") {
+                const gridStep = bgSettings.scale;
+                newX = Math.round(newX / gridStep) * gridStep;
+                newY = Math.round(newY / gridStep) * gridStep;
+            }
+
+            plane.x = newX;
+            plane.y = newY;
         } else if (activeAction.type === "rotate") {
             const currentAngleRad = Math.atan2(e.clientY - activeAction.screenY, e.clientX - activeAction.screenX);
             let deltaDeg = (currentAngleRad - activeAction.startAngleRad) * (180 / Math.PI);

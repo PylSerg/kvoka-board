@@ -168,8 +168,18 @@
         if (activeAction.type === "move") {
             const dx = (e.clientX - activeAction.startX) / boardData.zoom;
             const dy = (e.clientY - activeAction.startY) / boardData.zoom;
-            line.x = activeAction.initialX + dx;
-            line.y = activeAction.initialY + dy;
+            let newX = activeAction.initialX + dx;
+            let newY = activeAction.initialY + dy;
+
+            // Snap to grid
+            if (bgSettings.overlay !== "none") {
+                const gridStep = bgSettings.scale;
+                newX = Math.round(newX / gridStep) * gridStep;
+                newY = Math.round(newY / gridStep) * gridStep;
+            }
+
+            line.x = newX;
+            line.y = newY;
         } else if (activeAction.type === "rotate") {
             const currentAngleRad = Math.atan2(e.clientY - activeAction.screenY, e.clientX - activeAction.screenX);
             let deltaDeg = (currentAngleRad - activeAction.startAngleRad) * (180 / Math.PI);
