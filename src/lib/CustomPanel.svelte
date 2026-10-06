@@ -1,6 +1,6 @@
 <script>
     import { onMount, tick } from "svelte";
-    import { customPanelsData, savePanelsToDB, brushSettings, boardData, undo, redo, clearAll, saveState, addRuler, addSetSquare, addProtractor, addCompass, addCoordLine, addCoordPlane2D, addCoordPlane3D } from "$lib";
+    import { customPanelsData, savePanelsToDB, brushSettings, boardData, undo, redo, clearAll, saveState, addRuler, addSetSquare, addProtractor, addCompass, addCoordLine, addCoordPlane2D, addCoordPlane3D, addImage } from "$lib";
     import orientationVerticalIcon from "$lib/assets/orientation-vertical.png";
     import orientationHorizontalIcon from "$lib/assets/orientation-horizontal.png";
     import moveIcon from "$lib/assets/hand-cursor.png";
@@ -37,6 +37,7 @@
         { id: 'brush', label: 'Пензель', category: 'Малювання' },
         { id: 'eraser', label: 'Гумка', category: 'Малювання' },
         { id: 'text', label: 'Текст', category: 'Малювання' },
+        { id: 'insertImage', label: 'Вставити зображення', category: 'Малювання' },
         { id: 'ruler', label: 'Лінійка', category: 'Інструменти' },
         { id: 'setSquare', label: 'Косинець', category: 'Інструменти' },
         { id: 'protractor', label: 'Транспортир', category: 'Інструменти' },
@@ -343,6 +344,10 @@
                 <button class={brushSettings.tool === "text" ? "active" : ""} onclick={() => (brushSettings.tool = "text")} title="Текст">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon text-icon"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
                 </button>
+            {:else if toolId === 'insertImage'}
+                <button onclick={addImage} title="Вставити зображення" class="action-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon text-icon"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                </button>
             {:else if toolId === 'ruler'}
                 <button onclick={addRuler} title="Додати лінійку" class="action-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon text-icon"><rect x="2" y="6" width="20" height="12" rx="2"></rect><line x1="6" y1="6" x2="6" y2="12"></line><line x1="10" y1="6" x2="10" y2="10"></line><line x1="14" y1="6" x2="14" y2="12"></line><line x1="18" y1="6" x2="18" y2="10"></line></svg>
@@ -435,6 +440,8 @@
                                     <img src={eraserIcon} alt={t.label} class="icon" />
                                 {:else if t.id === 'text'}
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon text-icon"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                                {:else if t.id === 'insertImage'}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon text-icon"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                                 {:else if t.id === 'ruler'}
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon text-icon"><rect x="2" y="6" width="20" height="12" rx="2"></rect><line x1="6" y1="6" x2="6" y2="12"></line><line x1="10" y1="6" x2="10" y2="10"></line><line x1="14" y1="6" x2="14" y2="12"></line><line x1="18" y1="6" x2="18" y2="10"></line></svg>
                                 {:else if t.id === 'setSquare'}

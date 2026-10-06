@@ -1,4 +1,110 @@
 // src/lib/store.svelte.js
+import { saveState } from './history.svelte.js';
+
+// Глобальний кеш для завантажених HTMLImageElement (за src / data URL)
+export const imageCache = new Map();
+
+/**
+ * Завантажує зображення і додає його в кеш.
+ * Повертає Promise<HTMLImageElement>.
+ */
+export function loadImageCached(src) {
+    if (!src) return Promise.reject(new Error("No src provided"));
+    if (imageCache.has(src)) {
+        return Promise.resolve(imageCache.get(src));
+    }
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            imageCache.set(src, img);
+            resolve(img);
+        };
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+/**
+ * Вставляє файл зображення на дошку у задану позицію екрану (або по центру).
+ */
+export function insertImageFile(file, screenX, screenY) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (re) => {
+        const dataUrl = re.target.result;
+        const img = new Image();
+        img.onload = () => {
+            imageCache.set(dataUrl, img);
+            saveState();
+
+            const scX = typeof screenX === 'number' ? screenX : (typeof window !== 'undefined' ? window.innerWidth / 2 : 400);
+            const scY = typeof screenY === 'number' ? screenY : (typeof window !== 'undefined' ? window.innerHeight / 2 : 300);
+            const canvasX = (scX - boardData.offsetX) / boardData.zoom;
+            const canvasY = (scY - boardData.offsetY) / boardData.zoom;
+
+            const maxDim = 500 / boardData.zoom;
+            let drawWidth = img.naturalWidth || 300;
+            let drawHeight = img.naturalHeight || 200;
+
+            if (drawWidth > maxDim || drawHeight > maxDim) {
+                const ratio = Math.min(maxDim / drawWidth, maxDim / drawHeight);
+                drawWidth *= ratio;
+                drawHeight *= ratio;
+            }
+
+            if (drawWidth < 20) drawWidth = 20;
+            if (drawHeight < 20) drawHeight = 20;
+
+            const newImageId = Date.now() + Math.random();
+            const newImage = {
+                id: newImageId,
+                tool: 'image',
+                src: dataUrl,
+                naturalWidth: img.naturalWidth || drawWidth,
+                naturalHeight: img.naturalHeight || drawHeight,
+                opacity: 1,
+                flipX: false,
+                flipY: false,
+                rotation: 0,
+                filter: 'none',
+                color: '#000000',
+                width: 2,
+                points: [
+                    { x: canvasX - drawWidth / 2, y: canvasY - drawHeight / 2 },
+                    { x: canvasX + drawWidth / 2, y: canvasY + drawHeight / 2 }
+                ]
+            };
+
+            boardData.lines = [...boardData.lines, newImage];
+            brushSettings.tool = 'select';
+            boardData.selectedLineIds = [newImageId];
+        };
+        img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+}
+
+/**
+ * Відкриває діалог вибору файлу для додавання зображення на дошку.
+ */
+export function addImage() {
+    if (typeof document === 'undefined') return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            insertImageFile(file);
+        }
+        document.body.removeChild(input);
+    };
+
+    input.click();
+}
 
 export const brushSettings = $state({
     color: '#000000',

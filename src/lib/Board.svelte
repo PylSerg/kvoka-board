@@ -1,6 +1,6 @@
 <script>
     import { onMount, untrack } from "svelte";
-    import { brushSettings, boardData, bgSettings, saveState } from "$lib";
+    import { brushSettings, boardData, bgSettings, saveState, loadImageCached, imageCache, insertImageFile } from "$lib";
     import SelectionMenu from "./SelectionMenu.svelte";
     import { drawShape } from "./shapeRenderer.js";
 
@@ -153,10 +153,45 @@
         };
         window.addEventListener("beforeunload", handleBeforeUnload);
 
+        const handlePaste = (e) => {
+            if (e.clipboardData && e.clipboardData.items) {
+                for (const item of e.clipboardData.items) {
+                    if (item.type.indexOf("image") !== -1) {
+                        const file = item.getAsFile();
+                        if (file) {
+                            insertImageFile(file, mouseX, mouseY);
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+        window.addEventListener("paste", handlePaste);
+
+        const handleDragOver = (e) => {
+            if (e.dataTransfer && e.dataTransfer.types.includes("Files")) {
+                e.preventDefault();
+            }
+        };
+        const handleDrop = (e) => {
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.type.startsWith("image/")) {
+                    e.preventDefault();
+                    insertImageFile(file, e.clientX, e.clientY);
+                }
+            }
+        };
+        window.addEventListener("dragover", handleDragOver);
+        window.addEventListener("drop", handleDrop);
+
         return () => {
             window.removeEventListener("resize", resizeCanvas);
             canvas.removeEventListener("wheel", handleWheel);
             window.removeEventListener("beforeunload", handleBeforeUnload);
+            window.removeEventListener("paste", handlePaste);
+            window.removeEventListener("dragover", handleDragOver);
+            window.removeEventListener("drop", handleDrop);
         };
     });
 
@@ -174,6 +209,15 @@
             y: y * boardData.zoom + boardData.offsetY,
         };
     }
+
+    $effect(() => {
+        // Прекешуємо зображення при появі
+        boardData.lines.forEach((line) => {
+            if (line.tool === "image" && line.src && !imageCache.has(line.src)) {
+                loadImageCached(line.src).then(() => redraw()).catch(() => {});
+            }
+        });
+    });
 
     $effect(() => {
         // Слідкуємо за змінами в даних дошки, щоб автоматично перемальовувати канвас
@@ -214,6 +258,55 @@
             }
         }
     });
+
+    function drawImageLine(renderCtx, line) {
+        if (!line.src || !line.points || line.points.length < 2) return;
+        const cachedImg = imageCache.get(line.src);
+        if (!cachedImg) {
+            loadImageCached(line.src).then(() => redraw()).catch(() => {});
+            return;
+        }
+
+        const bb = getBoundingBox(line);
+        const x = bb.minX;
+        const y = bb.minY;
+        const w = bb.maxX - bb.minX;
+        const h = bb.maxY - bb.minY;
+        if (w <= 0 || h <= 0) return;
+
+        renderCtx.save();
+        const opacity = typeof line.opacity === "number" ? line.opacity : 1;
+        renderCtx.globalAlpha = opacity;
+
+        if (line.filter && line.filter !== "none") {
+            if (line.filter === "grayscale") {
+                renderCtx.filter = "grayscale(100%)";
+            } else if (line.filter === "invert") {
+                renderCtx.filter = "invert(100%)";
+            }
+        }
+
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        renderCtx.translate(cx, cy);
+
+        if (line.rotation) {
+            renderCtx.rotate((line.rotation * Math.PI) / 180);
+        }
+
+        const flipX = line.flipX || false;
+        const flipY = line.flipY || false;
+        if (flipX || flipY) {
+            renderCtx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+        }
+
+        const isOrthogonal = Math.round(line.rotation || 0) % 180 !== 0;
+        const drawW = isOrthogonal ? h : w;
+        const drawH = isOrthogonal ? w : h;
+
+        renderCtx.drawImage(cachedImg, -drawW / 2, -drawH / 2, drawW, drawH);
+        renderCtx.restore();
+    }
 
     function drawLine(ctx, line) {
         if (!line.points || line.points.length === 0) return;
@@ -302,7 +395,20 @@
                     offscreenCtx.shadowBlur = 0;
                 }
 
-                if (line.tool === "shape") {
+                if (line.tool === "image") {
+                    offscreenCtx.shadowBlur = 0;
+                    drawImageLine(offscreenCtx, line);
+                    if (boardData.selectedLineIds.includes(line.id)) {
+                        const bb = getBoundingBox(line);
+                        offscreenCtx.save();
+                        offscreenCtx.strokeStyle = "#ff3e00";
+                        offscreenCtx.lineWidth = 2 / boardData.zoom;
+                        offscreenCtx.shadowColor = "rgba(255, 62, 0, 0.6)";
+                        offscreenCtx.shadowBlur = 10 / boardData.zoom;
+                        offscreenCtx.strokeRect(bb.minX, bb.minY, bb.maxX - bb.minX, bb.maxY - bb.minY);
+                        offscreenCtx.restore();
+                    }
+                } else if (line.tool === "shape") {
                     drawShape(offscreenCtx, line);
                 } else if (line.tool === "text") {
                     offscreenCtx.font = `${line.fontSize || 24}px sans-serif`;
@@ -410,7 +516,9 @@
                         y: p.y + dy,
                     })),
                 };
-                if (offsetLine.tool === "shape") {
+                if (offsetLine.tool === "image") {
+                    drawImageLine(ctx, offsetLine);
+                } else if (offsetLine.tool === "shape") {
                     drawShape(ctx, offsetLine);
                 } else if (offsetLine.tool === "text") {
                     ctx.font = `${offsetLine.fontSize || 24}px sans-serif`;
@@ -631,7 +739,16 @@
     }
 
     function getBoundingBox(line) {
-        if (line.tool === "text") {
+        if (line.tool === "image") {
+            const p1 = line.points[0];
+            const p2 = line.points[1] || p1;
+            return {
+                minX: Math.min(p1.x, p2.x),
+                minY: Math.min(p1.y, p2.y),
+                maxX: Math.max(p1.x, p2.x),
+                maxY: Math.max(p1.y, p2.y),
+            };
+        } else if (line.tool === "text") {
             const w = line.text.length * ((line.fontSize || 24) * 0.6);
             const h = line.fontSize || 24;
             return {
@@ -825,7 +942,7 @@
         const minY = Math.min(p1.y, p2.y);
         const maxY = Math.max(p1.y, p2.y);
 
-        if (line.tool === "shape" || line.tool === "text") {
+        if (line.tool === "shape" || line.tool === "text" || line.tool === "image") {
             const bb = getBoundingBox(line);
             return !(
                 bb.maxX < minX ||
@@ -1054,7 +1171,7 @@
 
     // Математика кліку мишкою по лінії (для поодинокого виділення)
     function isPointNearLine(px, py, line) {
-        if (line.tool === "shape" || line.tool === "text") {
+        if (line.tool === "shape" || line.tool === "text" || line.tool === "image") {
             const bb = getBoundingBox(line);
             // Фіксований threshold для shape/text, не залежить від width
             const threshold = Math.max(8, line.width || 0) / boardData.zoom;
@@ -1535,6 +1652,33 @@
                         scaledLine.fontSize =
                             (resizeOriginalLine.fontSize || 24) * scaleY;
                         if (scaledLine.fontSize < 5) scaledLine.fontSize = 5;
+                    } else if (scaledLine.tool === "image") {
+                        let finalMinX = newMinX;
+                        let finalMaxX = newMaxX;
+                        let finalMinY = newMinY;
+                        let finalMaxY = newMaxY;
+                        if (e.shiftKey && resizeOriginalBB) {
+                            const origW = resizeOriginalBB.maxX - resizeOriginalBB.minX;
+                            const origH = resizeOriginalBB.maxY - resizeOriginalBB.minY;
+                            if (origW > 0 && origH > 0) {
+                                const aspect = origW / origH;
+                                let w = finalMaxX - finalMinX;
+                                let h = finalMaxY - finalMinY;
+                                if (w / h > aspect) {
+                                    w = h * aspect;
+                                } else {
+                                    h = w / aspect;
+                                }
+                                if (activeResizeHandle.includes("w")) finalMinX = finalMaxX - w;
+                                else finalMaxX = finalMinX + w;
+                                if (activeResizeHandle.includes("n")) finalMinY = finalMaxY - h;
+                                else finalMaxY = finalMinY + h;
+                            }
+                        }
+                        scaledLine.points = [
+                            { x: finalMinX, y: finalMinY },
+                            { x: finalMaxX, y: finalMaxY }
+                        ];
                     } else {
                         scaledLine.points = resizeOriginalLine.points.map(
                             (p) => ({
@@ -1695,6 +1839,153 @@
         copiedLines = [];
         redraw();
     }
+
+    function updateSelectedImage(updater) {
+        if (boardData.selectedLineIds.length !== 1) return;
+        const id = boardData.selectedLineIds[0];
+        saveState();
+        boardData.lines = boardData.lines.map((l) => {
+            if (l.id === id && l.tool === "image") {
+                return updater({ ...l });
+            }
+            return l;
+        });
+        redraw();
+    }
+
+    function rotateSelectedImage(angleDelta) {
+        if (boardData.selectedLineIds.length !== 1) return;
+        const id = boardData.selectedLineIds[0];
+        const line = boardData.lines.find((l) => l.id === id);
+        if (!line || line.tool !== "image") return;
+
+        saveState();
+        const bb = getBoundingBox(line);
+        const cx = (bb.minX + bb.maxX) / 2;
+        const cy = (bb.minY + bb.maxY) / 2;
+        const w = bb.maxX - bb.minX;
+        const h = bb.maxY - bb.minY;
+
+        // Міняємо місцями ширину та висоту точок при обертанні на 90 або -90 градусів
+        const newHalfW = h / 2;
+        const newHalfH = w / 2;
+        const newPoints = [
+            { x: cx - newHalfW, y: cy - newHalfH },
+            { x: cx + newHalfW, y: cy + newHalfH },
+        ];
+
+        const newRotation = (((line.rotation || 0) + angleDelta) % 360 + 360) % 360;
+
+        boardData.lines = boardData.lines.map((l) => {
+            if (l.id === id) {
+                return {
+                    ...l,
+                    points: newPoints,
+                    rotation: newRotation,
+                };
+            }
+            return l;
+        });
+        redraw();
+    }
+
+    function resetImageAspectRatio() {
+        if (boardData.selectedLineIds.length !== 1) return;
+        const id = boardData.selectedLineIds[0];
+        const line = boardData.lines.find((l) => l.id === id);
+        if (!line || line.tool !== "image") return;
+
+        const natW = line.naturalWidth;
+        const natH = line.naturalHeight;
+        if (!natW || !natH) return;
+
+        saveState();
+        const bb = getBoundingBox(line);
+        const cx = (bb.minX + bb.maxX) / 2;
+        const cy = (bb.minY + bb.maxY) / 2;
+        const currentW = bb.maxX - bb.minX;
+
+        const isOrthogonal = Math.round(line.rotation || 0) % 180 !== 0;
+        const targetRatio = isOrthogonal ? natH / natW : natW / natH;
+        const newH = currentW / targetRatio;
+
+        boardData.lines = boardData.lines.map((l) => {
+            if (l.id === id) {
+                return {
+                    ...l,
+                    points: [
+                        { x: cx - currentW / 2, y: cy - newH / 2 },
+                        { x: cx + currentW / 2, y: cy + newH / 2 },
+                    ],
+                };
+            }
+            return l;
+        });
+        redraw();
+    }
+
+    function bringSelectedImageToFront() {
+        if (boardData.selectedLineIds.length !== 1) return;
+        const id = boardData.selectedLineIds[0];
+        saveState();
+        const item = boardData.lines.find((l) => l.id === id);
+        if (!item) return;
+        boardData.lines = [...boardData.lines.filter((l) => l.id !== id), item];
+        redraw();
+    }
+
+    function sendSelectedImageToBack() {
+        if (boardData.selectedLineIds.length !== 1) return;
+        const id = boardData.selectedLineIds[0];
+        saveState();
+        const item = boardData.lines.find((l) => l.id === id);
+        if (!item) return;
+        boardData.lines = [item, ...boardData.lines.filter((l) => l.id !== id)];
+        redraw();
+    }
+
+    function replaceSelectedImage() {
+        if (boardData.selectedLineIds.length !== 1) return;
+        const id = boardData.selectedLineIds[0];
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.style.display = "none";
+        document.body.appendChild(input);
+
+        input.onchange = (evt) => {
+            const file = evt.target.files?.[0];
+            if (!file) {
+                document.body.removeChild(input);
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (re) => {
+                const dataUrl = re.target.result;
+                const img = new Image();
+                img.onload = () => {
+                    imageCache.set(dataUrl, img);
+                    saveState();
+                    boardData.lines = boardData.lines.map((l) => {
+                        if (l.id === id) {
+                            return {
+                                ...l,
+                                src: dataUrl,
+                                naturalWidth: img.naturalWidth,
+                                naturalHeight: img.naturalHeight,
+                            };
+                        }
+                        return l;
+                    });
+                    redraw();
+                };
+                img.src = dataUrl;
+            };
+            reader.readAsDataURL(file);
+            document.body.removeChild(input);
+        };
+        input.click();
+    }
 </script>
 
 <canvas
@@ -1804,6 +2095,163 @@
     ></textarea>
 {/if}
 
+{#if boardData.selectedLineIds.length === 1 && brushSettings.tool === "select" && !isMoving && !isResizing}
+    {@const selectedImgLine = boardData.lines.find((l) => l.id === boardData.selectedLineIds[0])}
+    {#if selectedImgLine?.tool === "image"}
+        {@const imgBB = getBoundingBox(selectedImgLine)}
+        {@const screenTopCenter = toScreen((imgBB.minX + imgBB.maxX) / 2, imgBB.minY)}
+        {@const screenBottomCenter = toScreen((imgBB.minX + imgBB.maxX) / 2, imgBB.maxY)}
+        {@const toolbarPos = {
+            x: Math.max(220, Math.min(window.innerWidth - 220, screenTopCenter.x)),
+            y: screenTopCenter.y < 70 ? screenBottomCenter.y + 16 : screenTopCenter.y - 56,
+        }}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+            class="image-edit-toolbar"
+            style="left: {toolbarPos.x}px; top: {toolbarPos.y}px;"
+            onpointerdown={(e) => e.stopPropagation()}
+            role="toolbar"
+            tabindex="-1"
+            aria-label="Панель редагування зображення"
+        >
+            <!-- 1. Прозорість -->
+            <div class="img-toolbar-group" title="Прозорість">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="img-tool-icon"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor"/></svg>
+                <input
+                    type="range"
+                    min="0.05"
+                    max="1"
+                    step="0.05"
+                    value={selectedImgLine.opacity ?? 1}
+                    oninput={(e) => {
+                        const newOpacity = parseFloat(e.target.value);
+                        updateSelectedImage((img) => ({ ...img, opacity: newOpacity }));
+                    }}
+                />
+                <span class="img-toolbar-value">{Math.round((selectedImgLine.opacity ?? 1) * 100)}%</span>
+            </div>
+
+            <div class="img-toolbar-divider"></div>
+
+            <!-- 2. Віддзеркалення -->
+            <button
+                class="img-toolbar-btn"
+                class:active={selectedImgLine.flipX}
+                title="Віддзеркалити по горизонталі"
+                onclick={() => updateSelectedImage((img) => ({ ...img, flipX: !img.flipX }))}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><polyline points="4 12 2 12 8 6"/><polyline points="4 12 2 12 8 18"/><polyline points="20 12 22 12 16 6"/><polyline points="20 12 22 12 16 18"/></svg>
+            </button>
+
+            <button
+                class="img-toolbar-btn"
+                class:active={selectedImgLine.flipY}
+                title="Віддзеркалити по вертикалі"
+                onclick={() => updateSelectedImage((img) => ({ ...img, flipY: !img.flipY }))}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><polyline points="12 4 12 2 6 8"/><polyline points="12 4 12 2 18 8"/><polyline points="12 20 12 22 6 16"/><polyline points="12 20 12 22 18 16"/></svg>
+            </button>
+
+            <div class="img-toolbar-divider"></div>
+
+            <!-- 3. Обертання -->
+            <button
+                class="img-toolbar-btn"
+                title="Повернути на 90° проти годинникової стрілки"
+                onclick={() => rotateSelectedImage(-90)}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+            </button>
+
+            <button
+                class="img-toolbar-btn"
+                title="Повернути на 90° за годинниковою стрілкою"
+                onclick={() => rotateSelectedImage(90)}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.99 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>
+            </button>
+
+            <div class="img-toolbar-divider"></div>
+
+            <!-- 4. Фільтри кольору -->
+            <div class="img-filter-group" title="Фільтр зображення">
+                <button
+                    class="img-filter-chip"
+                    class:active={!selectedImgLine.filter || selectedImgLine.filter === "none"}
+                    title="Звичайний колір"
+                    onclick={() => updateSelectedImage((img) => ({ ...img, filter: "none" }))}
+                >
+                    Колір
+                </button>
+                <button
+                    class="img-filter-chip"
+                    class:active={selectedImgLine.filter === "grayscale"}
+                    title="Чорно-білий"
+                    onclick={() => updateSelectedImage((img) => ({ ...img, filter: "grayscale" }))}
+                >
+                    Ч/Б
+                </button>
+                <button
+                    class="img-filter-chip"
+                    class:active={selectedImgLine.filter === "invert"}
+                    title="Інверсія кольорів"
+                    onclick={() => updateSelectedImage((img) => ({ ...img, filter: "invert" }))}
+                >
+                    Інверсія
+                </button>
+            </div>
+
+            <div class="img-toolbar-divider"></div>
+
+            <!-- 5. Відновити пропорції -->
+            <button
+                class="img-toolbar-btn"
+                title="Відновити оригінальні пропорції"
+                onclick={resetImageAspectRatio}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+
+            <!-- 6. Порядок шарів -->
+            <button
+                class="img-toolbar-btn"
+                title="На задній план (під лінії)"
+                onclick={sendSelectedImageToBack}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            </button>
+
+            <button
+                class="img-toolbar-btn"
+                title="На передній план (над лініями)"
+                onclick={bringSelectedImageToFront}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/></svg>
+            </button>
+
+            <div class="img-toolbar-divider"></div>
+
+            <!-- 7. Замінити -->
+            <button
+                class="img-toolbar-btn"
+                title="Замінити зображення з файлу"
+                onclick={replaceSelectedImage}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+
+            <!-- 8. Видалити -->
+            <button
+                class="img-toolbar-btn delete-btn"
+                title="Видалити зображення"
+                onclick={handleDelete}
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
+        </div>
+    {/if}
+{/if}
+
 <style>
     canvas {
         background: #ffffff;
@@ -1838,5 +2286,127 @@
         border-radius: 50%;
         transform: translate(-50%, -50%);
         z-index: 9999;
+    }
+
+    /* Панель редагування зображення */
+    .image-edit-toolbar {
+        position: fixed;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.04);
+        padding: 5px 10px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        z-index: 10001;
+        animation: fadeInToolbar 0.15s ease-out;
+        user-select: none;
+    }
+
+    @keyframes fadeInToolbar {
+        from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    .img-toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .img-tool-icon {
+        color: #666;
+        flex-shrink: 0;
+    }
+
+    .img-toolbar-group input[type="range"] {
+        width: 64px;
+        height: 4px;
+        accent-color: #007bff;
+        cursor: pointer;
+    }
+
+    .img-toolbar-value {
+        min-width: 32px;
+        text-align: right;
+        font-size: 11px;
+        font-weight: 600;
+        color: #444;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .img-toolbar-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #555;
+        transition: all 0.15s ease;
+    }
+
+    .img-toolbar-btn:hover {
+        background: rgba(0, 123, 255, 0.1);
+        color: #007bff;
+    }
+
+    .img-toolbar-btn:active {
+        transform: scale(0.92);
+    }
+
+    .img-toolbar-btn.active {
+        background: rgba(0, 123, 255, 0.15);
+        color: #007bff;
+    }
+
+    .img-toolbar-btn.delete-btn:hover {
+        background: rgba(255, 59, 48, 0.1);
+        color: #ff3b30;
+    }
+
+    .img-toolbar-divider {
+        width: 1px;
+        height: 20px;
+        background: rgba(0, 0, 0, 0.08);
+        margin: 0 2px;
+    }
+
+    .img-filter-group {
+        display: flex;
+        background: #f0f2f5;
+        border-radius: 6px;
+        padding: 2px;
+        gap: 2px;
+    }
+
+    .img-filter-chip {
+        border: none;
+        background: transparent;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #666;
+        padding: 3px 6px;
+        cursor: pointer;
+        transition: all 0.12s ease;
+    }
+
+    .img-filter-chip:hover {
+        color: #111;
+    }
+
+    .img-filter-chip.active {
+        background: #ffffff;
+        color: #007bff;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 </style>

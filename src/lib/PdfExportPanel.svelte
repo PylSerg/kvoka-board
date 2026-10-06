@@ -1,5 +1,5 @@
 <script>
-    import { boardData } from "$lib";
+    import { boardData, imageCache } from "$lib";
 
     let isGenerating = $state(false);
 
@@ -101,6 +101,35 @@
             offCtx.lineWidth = line.width;
             offCtx.lineCap = "round";
             offCtx.lineJoin = "round";
+
+            if (line.tool === "image") {
+                const cachedImg = imageCache.get(line.src);
+                if (cachedImg && line.points && line.points.length >= 2) {
+                    const p1 = line.points[0];
+                    const p2 = line.points[1];
+                    const ix = Math.min(p1.x, p2.x);
+                    const iy = Math.min(p1.y, p2.y);
+                    const iw = Math.abs(p2.x - p1.x);
+                    const ih = Math.abs(p2.y - p1.y);
+                    if (iw > 0 && ih > 0) {
+                        offCtx.save();
+                        offCtx.globalAlpha = typeof line.opacity === 'number' ? line.opacity : 1;
+                        if (line.filter === 'grayscale') offCtx.filter = 'grayscale(100%)';
+                        else if (line.filter === 'invert') offCtx.filter = 'invert(100%)';
+                        const cx = ix + iw / 2;
+                        const cy = iy + ih / 2;
+                        offCtx.translate(cx, cy);
+                        if (line.rotation) offCtx.rotate((line.rotation * Math.PI) / 180);
+                        if (line.flipX || line.flipY) offCtx.scale(line.flipX ? -1 : 1, line.flipY ? -1 : 1);
+                        const isOrtho = Math.round(line.rotation || 0) % 180 !== 0;
+                        const dw = isOrtho ? ih : iw;
+                        const dh = isOrtho ? iw : ih;
+                        offCtx.drawImage(cachedImg, -dw / 2, -dh / 2, dw, dh);
+                        offCtx.restore();
+                    }
+                }
+                return;
+            }
 
             if (!line.points || line.points.length === 0) return;
 

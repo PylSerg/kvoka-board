@@ -1,6 +1,6 @@
 <script>
     import { onMount } from "svelte";
-    import { boardData, bgSettings, saveBgSettings, saveState, deleteBoardFromDB, customPanelsData, savePanelsToDB, addRuler, addSetSquare, addProtractor, addCompass, addCoordLine, addCoordPlane2D, addCoordPlane3D } from "$lib";
+    import { boardData, bgSettings, saveBgSettings, saveState, deleteBoardFromDB, customPanelsData, savePanelsToDB, addRuler, addSetSquare, addProtractor, addCompass, addCoordLine, addCoordPlane2D, addCoordPlane3D, addImage } from "$lib";
 
     let isOpen = $state(false);
     let isBgOpen = $state(false);
@@ -1155,6 +1155,30 @@
                                 <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
                             </svg>
                             <span>Координатна площина (x; y; z)</span>
+                        </button>
+
+                        <button
+                            id="insert-image-option"
+                            class="dropdown-item"
+                            onclick={() => { addImage(); closeMenu(); }}
+                        >
+                            <svg
+                                class="item-icon"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                                <circle cx="9" cy="9" r="2"></circle>
+                                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                            </svg>
+                            <span>Вставити зображення</span>
                         </button>
                     </div>
                 {/if}

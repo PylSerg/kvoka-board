@@ -11,6 +11,6 @@ export { default as CompassOverlay } from './CompassOverlay.svelte';
 export { default as CoordLineOverlay } from './CoordLineOverlay.svelte';
 export { default as CoordPlane2DOverlay } from './CoordPlane2DOverlay.svelte';
 export { default as CoordPlane3DOverlay } from './CoordPlane3DOverlay.svelte';
-export { brushSettings, boardData, bgSettings, saveBgSettings, customPanelsData, addRuler, deleteRuler, addSetSquare, deleteSetSquare, toggleFlipXSetSquare, toggleFlipYSetSquare, addProtractor, deleteProtractor, toggleFlipYProtractor, addCompass, deleteCompass, addCoordLine, deleteCoordLine, addCoordPlane2D, deleteCoordPlane2D, addCoordPlane3D, deleteCoordPlane3D } from './store.svelte.js';
+export { brushSettings, boardData, bgSettings, saveBgSettings, customPanelsData, addRuler, deleteRuler, addSetSquare, deleteSetSquare, toggleFlipXSetSquare, toggleFlipYSetSquare, addProtractor, deleteProtractor, toggleFlipYProtractor, addCompass, deleteCompass, addCoordLine, deleteCoordLine, addCoordPlane2D, deleteCoordPlane2D, addCoordPlane3D, deleteCoordPlane3D, addImage, insertImageFile, loadImageCached, imageCache } from './store.svelte.js';
 export { saveState, undo, redo, clearAll } from './history.svelte.js';
 export { saveBoardToDB, loadBoardFromDB, deleteBoardFromDB, savePanelsToDB, loadPanelsFromDB } from './idb.js';
