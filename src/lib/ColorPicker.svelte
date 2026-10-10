@@ -1,5 +1,6 @@
 <script>
     import { onMount, tick } from "svelte";
+    import { getViewportPopupStyle } from "./popupPosition.js";
 
     let {
         color = $bindable(),
@@ -10,8 +11,9 @@
     } = $props();
 
     let isOpen = $state(false);
-    let colorPickerElement;
-    let popupStyle = $state("top: 0; left: calc(100% + 12px); right: auto; bottom: auto;");
+    let colorPickerElement = $state();
+    let popupElement = $state();
+    let popupStyle = $state("position: fixed; left: 8px; top: 8px;");
 
     // 9 фіксованих кольорів
     const fixedColors = [
@@ -54,34 +56,20 @@
         };
 
         window.addEventListener("pointerdown", handleOutsideClick);
-        return () =>
+        const handleResize = () => {
+            if (isOpen) computePopupStyle();
+        };
+        window.addEventListener("resize", handleResize);
+        return () => {
             window.removeEventListener("pointerdown", handleOutsideClick);
+            window.removeEventListener("resize", handleResize);
+        };
     });
 
     async function computePopupStyle() {
         await tick();
-        if (!colorPickerElement) return;
-        const rect = colorPickerElement.getBoundingClientRect();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-
-        if (isVertical) {
-            if (rect.left < vw / 2) {
-                // Ближче до лівого краю — відображаємо справа
-                popupStyle = "top: 0; bottom: auto; left: calc(100% + 12px); right: auto;";
-            } else {
-                // Ближче до правого краю — відображаємо зліва
-                popupStyle = "top: 0; bottom: auto; right: calc(100% + 12px); left: auto;";
-            }
-        } else {
-            if (rect.top < vh / 2) {
-                // Ближче до верхнього краю — відображаємо знизу
-                popupStyle = "top: calc(100% + 12px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);";
-            } else {
-                // Ближче до нижнього краю — відображаємо зверху
-                popupStyle = "bottom: calc(100% + 12px); top: auto; left: 50%; right: auto; transform: translateX(-50%);";
-            }
-        }
+        if (!colorPickerElement || !popupElement) return;
+        popupStyle = getViewportPopupStyle(colorPickerElement, popupElement, isVertical);
     }
 
     function saveCustomColors() {
@@ -132,7 +120,7 @@
 
     {#if isOpen}
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
+        <div bind:this={popupElement} class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
             <div class="section-title">Основні кольори</div>
             <div class="color-grid">
                 {#each fixedColors as c}
@@ -221,6 +209,10 @@
         padding: 12px;
         z-index: 1010;
         width: 136px;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        box-sizing: border-box;
+        overflow: auto;
         border: 1px solid #eee;
         display: flex;
         flex-direction: column;

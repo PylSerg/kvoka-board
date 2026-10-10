@@ -1,6 +1,7 @@
 <script>
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
     import { boardData, bgSettings, saveBgSettings, saveState, deleteBoardFromDB, customPanelsData, savePanelsToDB, addRuler, addSetSquare, addProtractor, addCompass, addCoordLine, addCoordPlane2D, addCoordPlane3D, addImage } from "$lib";
+    import { getViewportPopupStyle } from "./popupPosition.js";
 
     let isOpen = $state(false);
     let isBgOpen = $state(false);
@@ -8,6 +9,15 @@
     let isToolsOpen = $state(false);
     let menuContainer;
     let fileInput;
+    let bgTriggerEl = $state();
+    let panelsTriggerEl = $state();
+    let toolsTriggerEl = $state();
+    let bgSubmenuEl = $state();
+    let panelsSubmenuEl = $state();
+    let toolsSubmenuEl = $state();
+    let bgSubmenuStyle = $state("");
+    let panelsSubmenuStyle = $state("");
+    let toolsSubmenuStyle = $state("");
 
     function toggleMenu() {
         isOpen = !isOpen;
@@ -25,15 +35,61 @@
         isToolsOpen = false;
     }
 
+    async function positionSubmenu(triggerElement, submenuElement, setStyle) {
+        await tick();
+        triggerElement = typeof triggerElement === "function" ? triggerElement() : triggerElement;
+        submenuElement = typeof submenuElement === "function" ? submenuElement() : submenuElement;
+        if (!triggerElement || !submenuElement) return;
+
+        // On compact screens the submenu is intentionally part of the main
+        // menu flow, so it can be scrolled together with the menu.
+        if (window.innerWidth <= 700) {
+            setStyle("");
+            return;
+        }
+
+        setStyle(getViewportPopupStyle(triggerElement, submenuElement, true, 8));
+    }
+
+    function toggleBackgroundMenu() {
+        isPanelsOpen = false;
+        isToolsOpen = false;
+        isBgOpen = !isBgOpen;
+        if (isBgOpen) positionSubmenu(() => bgTriggerEl, () => bgSubmenuEl, (style) => (bgSubmenuStyle = style));
+    }
+
+    function togglePanelsMenu() {
+        isBgOpen = false;
+        isToolsOpen = false;
+        isPanelsOpen = !isPanelsOpen;
+        if (isPanelsOpen) positionSubmenu(() => panelsTriggerEl, () => panelsSubmenuEl, (style) => (panelsSubmenuStyle = style));
+    }
+
+    function toggleToolsMenu() {
+        isBgOpen = false;
+        isPanelsOpen = false;
+        isToolsOpen = !isToolsOpen;
+        if (isToolsOpen) positionSubmenu(() => toolsTriggerEl, () => toolsSubmenuEl, (style) => (toolsSubmenuStyle = style));
+    }
+
+    function repositionOpenSubmenu() {
+        if (isBgOpen) positionSubmenu(() => bgTriggerEl, () => bgSubmenuEl, (style) => (bgSubmenuStyle = style));
+        if (isPanelsOpen) positionSubmenu(() => panelsTriggerEl, () => panelsSubmenuEl, (style) => (panelsSubmenuStyle = style));
+        if (isToolsOpen) positionSubmenu(() => toolsTriggerEl, () => toolsSubmenuEl, (style) => (toolsSubmenuStyle = style));
+    }
+
     onMount(() => {
         const handleOutsideClick = (e) => {
             if (isOpen && menuContainer && !menuContainer.contains(e.target)) {
                 closeMenu();
             }
         };
+        const handleResize = () => repositionOpenSubmenu();
         window.addEventListener("pointerdown", handleOutsideClick);
+        window.addEventListener("resize", handleResize);
         return () => {
             window.removeEventListener("pointerdown", handleOutsideClick);
+            window.removeEventListener("resize", handleResize);
         };
     });
 
@@ -241,6 +297,7 @@
             posY: window.innerHeight / 2 - 100,
             isVertical: true,
             isVisible: true,
+            isCollapsed: false,
             tools: []
         };
         customPanelsData.panels = [...customPanelsData.panels, newPanel];
@@ -379,10 +436,11 @@
             <!-- Пункт Фон з підменю (першим) -->
             <div class="submenu-wrapper" class:submenu-open={isBgOpen}>
                 <button
+                    bind:this={bgTriggerEl}
                     id="bg-option"
                     class="dropdown-item submenu-trigger"
                     class:active={isBgOpen}
-                    onclick={() => { isPanelsOpen = false; isBgOpen = !isBgOpen; }}
+                    onclick={toggleBackgroundMenu}
                 >
                     <svg
                         class="item-icon"
@@ -422,8 +480,10 @@
                 {#if isBgOpen}
                     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                     <div
+                        bind:this={bgSubmenuEl}
                         id="bg-submenu"
                         class="bg-submenu"
+                        style={bgSubmenuStyle}
                         onpointerdown={(e) => e.stopPropagation()}
                     >
                         <!-- Накладка -->
@@ -817,9 +877,10 @@
             <!-- Пункт Панелі з підменю -->
             <div class="submenu-wrapper" class:submenu-open={isPanelsOpen}>
                 <button
+                    bind:this={panelsTriggerEl}
                     class="dropdown-item submenu-trigger"
                     class:active={isPanelsOpen}
-                    onclick={() => { isBgOpen = false; isToolsOpen = false; isPanelsOpen = !isPanelsOpen; }}
+                    onclick={togglePanelsMenu}
                 >
                     <svg
                         class="item-icon"
@@ -857,7 +918,9 @@
                 {#if isPanelsOpen}
                     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                     <div
+                        bind:this={panelsSubmenuEl}
                         class="bg-submenu panels-submenu"
+                        style={panelsSubmenuStyle}
                         onpointerdown={(e) => e.stopPropagation()}
                     >
                         <button class="create-panel-btn" onclick={createPanel}>
@@ -929,9 +992,10 @@
             <!-- Пункт Інструменти з підменю -->
             <div class="submenu-wrapper" class:submenu-open={isToolsOpen}>
                 <button
+                    bind:this={toolsTriggerEl}
                     class="dropdown-item submenu-trigger"
                     class:active={isToolsOpen}
-                    onclick={() => { isBgOpen = false; isPanelsOpen = false; isToolsOpen = !isToolsOpen; }}
+                    onclick={toggleToolsMenu}
                 >
                     <svg
                         class="item-icon"
@@ -968,7 +1032,9 @@
                 {#if isToolsOpen}
                     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                     <div
+                        bind:this={toolsSubmenuEl}
                         class="bg-submenu tools-submenu"
+                        style={toolsSubmenuStyle}
                         onpointerdown={(e) => e.stopPropagation()}
                     >
                         <button
@@ -1305,8 +1371,8 @@
 <style>
     .menu-container {
         position: fixed;
-        bottom: 10px;
-        left: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: max(10px, env(safe-area-inset-left));
         z-index: 1001;
         display: inline-block;
     }
@@ -1535,15 +1601,22 @@
         bottom: 52px;
         left: 0;
         background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+        /* Avoid creating a containing block for the viewport-positioned submenus. */
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
         border: 1px solid rgba(255, 255, 255, 0.5);
         box-shadow:
             0 10px 25px rgba(0, 0, 0, 0.1),
             0 3px 10px rgba(0, 0, 0, 0.05);
         border-radius: 12px;
         padding: 6px;
-        min-width: 210px;
+        width: min(260px, calc(100vw - 20px));
+        min-width: 0;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 68px);
+        box-sizing: border-box;
+        overflow-y: auto;
+        overscroll-behavior: contain;
         display: flex;
         flex-direction: column;
         gap: 2px;
@@ -1578,6 +1651,7 @@
         cursor: pointer;
         transition: all 0.2s ease;
         box-sizing: border-box;
+        min-width: 0;
     }
 
     .dropdown-item:hover {
@@ -1650,7 +1724,11 @@
             0 3px 10px rgba(0, 0, 0, 0.06);
         border-radius: 14px;
         padding: 14px;
-        width: 240px;
+        width: min(240px, calc(100vw - 24px));
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        box-sizing: border-box;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 16px;
@@ -1881,5 +1959,48 @@
     .reset-bg-btn:hover {
         background: rgba(255, 59, 48, 0.08);
         border-color: rgba(255, 59, 48, 0.4);
+    }
+
+    @media (max-width: 700px) {
+        .menu-container {
+            top: max(8px, env(safe-area-inset-top));
+            bottom: auto;
+            left: max(8px, env(safe-area-inset-left));
+        }
+
+        .dropdown-menu {
+            top: 52px;
+            bottom: auto;
+            width: min(320px, calc(100vw - 16px));
+            max-height: calc(100vh - 64px);
+            transform-origin: top left;
+        }
+
+        .bg-submenu,
+        .tools-submenu {
+            position: static;
+            width: auto;
+            max-width: none;
+            max-height: none;
+            overflow: visible;
+            margin: 2px 0 0;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: none;
+            animation: none;
+            transform: none;
+        }
+
+        .tools-submenu {
+            gap: 2px;
+        }
+
+        .dropdown-item {
+            padding: 9px 10px;
+        }
+
+        .dropdown-item:hover {
+            padding-left: 12px;
+        }
     }
 </style>

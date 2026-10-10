@@ -25,6 +25,7 @@
     let startY = 0;
     let toolbarEl;
     let initialized = $state(false);
+    let isCollapsed = $state(false);
 
     onMount(() => {
         const saved = localStorage.getItem("kvoka-toolbar-settings");
@@ -34,6 +35,7 @@
                 if (typeof parsed.posX === "number") posX = parsed.posX;
                 if (typeof parsed.posY === "number") posY = parsed.posY;
                 if (typeof parsed.isVertical === "boolean") isVertical = parsed.isVertical;
+                if (typeof parsed.isCollapsed === "boolean") isCollapsed = parsed.isCollapsed;
             } catch (e) {
                 console.error("Failed to parse toolbar settings", e);
             }
@@ -45,14 +47,38 @@
             }
         }
         initialized = true;
+
+        const handleResize = () => clampPosition();
+        window.addEventListener("resize", handleResize);
+        requestAnimationFrame(clampPosition);
+
+        return () => window.removeEventListener("resize", handleResize);
     });
 
     function saveToolbarSettings() {
         localStorage.setItem("kvoka-toolbar-settings", JSON.stringify({
             posX,
             posY,
-            isVertical
+            isVertical,
+            isCollapsed,
         }));
+    }
+
+    function clampPosition() {
+        if (!toolbarEl) return;
+
+        const margin = 8;
+        const maxX = Math.max(margin, window.innerWidth - toolbarEl.offsetWidth - margin);
+        const maxY = Math.max(margin, window.innerHeight - toolbarEl.offsetHeight - margin);
+        const nextX = Math.min(Math.max(posX, margin), maxX);
+        const nextY = Math.min(Math.max(posY, margin), maxY);
+
+        if (nextX !== posX) posX = nextX;
+        if (nextY !== posY) posY = nextY;
+    }
+
+    function scheduleClamp() {
+        requestAnimationFrame(clampPosition);
     }
 
     function startDrag(e) {
@@ -76,6 +102,7 @@
         if (!isDragging) return;
         posX = e.clientX - startX;
         posY = e.clientY - startY;
+        clampPosition();
     }
 
     function stopDrag() {
@@ -83,12 +110,20 @@
         window.removeEventListener("pointermove", handleDrag);
         window.removeEventListener("pointerup", stopDrag);
         window.removeEventListener("pointercancel", stopDrag);
+        clampPosition();
         saveToolbarSettings();
     }
 
     function toggleOrientation() {
         isVertical = !isVertical;
         saveToolbarSettings();
+        scheduleClamp();
+    }
+
+    function toggleCollapse() {
+        isCollapsed = !isCollapsed;
+        saveToolbarSettings();
+        scheduleClamp();
     }
 
     function zoomIn() {
@@ -147,6 +182,7 @@
     bind:this={toolbarEl}
     class="toolbar"
     class:horizontal={!isVertical}
+    class:collapsed={isCollapsed}
     onpointerdown={startDrag}
     style="left: {posX}px; top: {posY}px; {initialized ? '' : 'visibility: hidden;'}"
 >
@@ -175,7 +211,8 @@
         />
     </button>
 
-    <hr />
+    {#if !isCollapsed}
+        <hr />
 
     <button
         class={brushSettings.tool === "move" ? "active" : ""}
@@ -274,11 +311,28 @@
         <img src={redoIcon} alt="Вперед" class="icon" />
     </button>
 
-    <hr />
+        <hr />
 
-    <ClearConfirm {isVertical} onConfirm={clearAll} />
+        <ClearConfirm {isVertical} onConfirm={clearAll} />
 
-    <hr />
+        <hr />
+    {/if}
+
+    <button
+        onclick={toggleCollapse}
+        title={isCollapsed ? "Розгорнути панель" : "Згорнути панель"}
+        aria-label={isCollapsed ? "Розгорнути панель" : "Згорнути панель"}
+        class="action-btn collapse-btn"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+            {#if isCollapsed}
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            {:else}
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            {/if}
+        </svg>
+    </button>
 
     <button onclick={closeToolbar} title="Закрити панель (Сховати)" class="action-btn delete-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -292,6 +346,7 @@
         min-width: 36px;
         background: #ffffff;
         padding: 6px;
+        box-sizing: border-box;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         display: flex;
@@ -301,7 +356,12 @@
         z-index: 1000;
         cursor: grab;
         user-select: none;
-        touch-action: none;
+        touch-action: auto;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
 
         &:active {
             cursor: grabbing;
@@ -313,6 +373,7 @@
             align-items: center;
             color: #ccc;
             padding: 2px;
+            touch-action: none;
             transition: color 0.2s;
 
             &:hover {
@@ -322,8 +383,13 @@
 
         &.horizontal {
             flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            align-content: center;
             height: auto;
             min-height: 36px;
+            overflow-x: auto;
+            overflow-y: hidden;
 
             .drag-handle {
                 transform: rotate(90deg);
@@ -335,6 +401,7 @@
                 border-top: none;
                 border-left: 1px solid #ddd;
                 margin: 0 4px;
+                flex: 0 0 auto;
             }
 
             label input[type="range"] {
@@ -349,6 +416,7 @@
         justify-content: center;
         width: 36px;
         height: 36px;
+        flex: 0 0 36px;
         background-color: transparent;
         border: none;
         border-radius: 10px;
@@ -402,6 +470,7 @@
 
     hr {
         width: 100%;
+        flex: 0 0 auto;
         border: none;
         border-top: 1px solid #ddd;
         margin: 2px 0;
@@ -423,6 +492,23 @@
 
         input[type="range"] {
             width: 38px;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .toolbar {
+            gap: 4px;
+            padding: 4px;
+        }
+
+        .toolbar.horizontal hr {
+            margin: 0 2px;
+        }
+
+        button {
+            width: 34px;
+            height: 34px;
+            flex-basis: 34px;
         }
     }
 </style>

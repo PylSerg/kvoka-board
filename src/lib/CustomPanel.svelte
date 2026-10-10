@@ -17,6 +17,7 @@
     import ColorPicker from "./ColorPicker.svelte";
     import StrokeWidthPicker from "./StrokeWidthPicker.svelte";
     import ShapePicker from "./ShapePicker.svelte";
+    import { getViewportPopupStyle } from "./popupPosition.js";
     import ClearConfirm from "./ClearConfirm.svelte";
 
     let { panel } = $props();
@@ -25,9 +26,13 @@
     let startX = 0;
     let startY = 0;
     let isToolMenuOpen = $state(false);
-    let toolMenuContainerEl;
+    let toolMenuContainerEl = $state();
+    let toolMenuEl = $state();
+    let panelEl = $state();
     let menuPopupStyle = $state("");
     let contextMenu = $state({ isOpen: false, x: 0, y: 0, toolId: null });
+    let collapseOverride = $state(null);
+    let isCollapsed = $derived(collapseOverride ?? (panel.isCollapsed === true));
 
     if (!panel.tools) panel.tools = [];
 
@@ -87,6 +92,7 @@
         if (!isDragging) return;
         panel.posX = e.clientX - startX;
         panel.posY = e.clientY - startY;
+        clampPanelToViewport();
     }
 
     function stopDrag() {
@@ -94,12 +100,39 @@
         window.removeEventListener("pointermove", handleDrag);
         window.removeEventListener("pointerup", stopDrag);
         window.removeEventListener("pointercancel", stopDrag);
+        clampPanelToViewport();
         saveSettings();
+    }
+
+    function clampPanelToViewport() {
+        if (!panelEl) return;
+
+        const margin = 8;
+        const maxX = Math.max(margin, window.innerWidth - panelEl.offsetWidth - margin);
+        const maxY = Math.max(margin, window.innerHeight - panelEl.offsetHeight - margin);
+        const nextX = Math.min(Math.max(panel.posX, margin), maxX);
+        const nextY = Math.min(Math.max(panel.posY, margin), maxY);
+
+        if (nextX !== panel.posX) panel.posX = nextX;
+        if (nextY !== panel.posY) panel.posY = nextY;
+    }
+
+    function scheduleClamp() {
+        requestAnimationFrame(clampPanelToViewport);
     }
 
     function toggleOrientation() {
         panel.isVertical = !panel.isVertical;
         saveSettings();
+        scheduleClamp();
+    }
+
+    function toggleCollapse() {
+        collapseOverride = !isCollapsed;
+        panel.isCollapsed = collapseOverride;
+        isToolMenuOpen = false;
+        saveSettings();
+        scheduleClamp();
     }
 
     function closePanel() {
@@ -113,40 +146,23 @@
                 isToolMenuOpen = false;
             }
         };
+        const handleResize = () => {
+            clampPanelToViewport();
+            if (isToolMenuOpen) computeMenuPopupStyle();
+        };
         window.addEventListener("pointerdown", handleOutsideClick);
+        window.addEventListener("resize", handleResize);
+        requestAnimationFrame(clampPanelToViewport);
         return () => {
             window.removeEventListener("pointerdown", handleOutsideClick);
+            window.removeEventListener("resize", handleResize);
         };
     });
 
     async function computeMenuPopupStyle() {
         await tick();
-        if (!toolMenuContainerEl) return;
-        const rect = toolMenuContainerEl.getBoundingClientRect();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-
-        let style = "";
-        if (panel.isVertical) {
-            if (rect.left < vw / 2) {
-                style = "top: 0; bottom: auto; left: calc(100% + 10px); right: auto;";
-            } else {
-                style = "top: 0; bottom: auto; right: calc(100% + 10px); left: auto;";
-            }
-            if (rect.top + 420 > vh) {
-                style += " transform: translateY(-30%);";
-            }
-        } else {
-            if (rect.top < vh / 2) {
-                style = "top: calc(100% + 10px); bottom: auto; left: 0; right: auto;";
-            } else {
-                style = "bottom: calc(100% + 10px); top: auto; left: 0; right: auto;";
-            }
-            if (rect.left + 350 > vw) {
-                style = style.replace("left: 0; right: auto;", "right: 0; left: auto;");
-            }
-        }
-        menuPopupStyle = style;
+        if (!toolMenuContainerEl || !toolMenuEl) return;
+        menuPopupStyle = getViewportPopupStyle(toolMenuContainerEl, toolMenuEl, panel.isVertical, 10);
     }
 
     function toggleToolMenu() {
@@ -167,10 +183,12 @@
     function handleContextMenu(e, toolId) {
         e.preventDefault();
         e.stopPropagation();
+        const menuWidth = 136;
+        const menuHeight = 48;
         contextMenu = {
             isOpen: true,
-            x: e.clientX,
-            y: e.clientY,
+            x: Math.max(8, Math.min(window.innerWidth - menuWidth - 8, e.clientX)),
+            y: Math.max(8, Math.min(window.innerHeight - menuHeight - 8, e.clientY)),
             toolId
         };
     }
@@ -304,7 +322,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="toolbar" class:horizontal={!panel.isVertical} onpointerdown={startDrag} style="left: {panel.posX}px; top: {panel.posY}px;">
+<div bind:this={panelEl} class="toolbar" class:horizontal={!panel.isVertical} class:collapsed={isCollapsed} onpointerdown={startDrag} style="left: {panel.posX}px; top: {panel.posY}px;">
     <div class="drag-handle" title="Перетягнути панель">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <circle cx="9" cy="5" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="9" cy="19" r="2"/><circle cx="15" cy="5" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="15" cy="19" r="2"/>
@@ -315,7 +333,8 @@
         <img src={panel.isVertical ? orientationHorizontalIcon : orientationVerticalIcon} alt="Орієнтація" class="icon" />
     </button>
     
-    <hr />
+    {#if !isCollapsed}
+        <hr />
 
     <!-- Dynamic Tools Rendering -->
     {#each panel.tools as toolId (toolId)}
@@ -416,7 +435,7 @@
         </button>
         
         {#if isToolMenuOpen}
-            <div class="tool-menu" style={menuPopupStyle} onpointerdown={(e) => e.stopPropagation()}>
+            <div bind:this={toolMenuEl} class="tool-menu" style={menuPopupStyle} onpointerdown={(e) => e.stopPropagation()}>
                 <div class="tool-menu-header">
                     <span>Додати інструмент</span>
                 </div>
@@ -488,7 +507,23 @@
         {/if}
     </div>
 
-    <hr />
+    {/if}
+
+    <button
+        onclick={toggleCollapse}
+        title={isCollapsed ? "Розгорнути панель" : "Згорнути панель"}
+        aria-label={isCollapsed ? "Розгорнути панель" : "Згорнути панель"}
+        class="action-btn collapse-btn"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+            {#if isCollapsed}
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            {:else}
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            {/if}
+        </svg>
+    </button>
 
     <button onclick={closePanel} title="Закрити панель (Сховати)" class="action-btn delete-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -522,6 +557,7 @@
         min-width: 36px;
         background: #ffffff;
         padding: 6px;
+        box-sizing: border-box;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         display: flex;
@@ -531,7 +567,12 @@
         z-index: 1000;
         cursor: grab;
         user-select: none;
-        touch-action: none;
+        touch-action: auto;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        overflow: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
 
         &:active {
             cursor: grabbing;
@@ -543,6 +584,7 @@
             align-items: center;
             color: #ccc;
             padding: 2px;
+            touch-action: none;
             transition: color 0.2s;
 
             &:hover {
@@ -552,8 +594,13 @@
 
         &.horizontal {
             flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            align-content: center;
             height: auto;
             min-height: 36px;
+            overflow-x: auto;
+            overflow-y: hidden;
 
             .drag-handle {
                 transform: rotate(90deg);
@@ -565,6 +612,7 @@
                 border-top: none;
                 border-left: 1px solid #ddd;
                 margin: 0 4px;
+                flex: 0 0 auto;
             }
         }
     }
@@ -575,6 +623,7 @@
         justify-content: center;
         width: 36px;
         height: 36px;
+        flex: 0 0 36px;
         background-color: transparent;
         border: none;
         border-radius: 10px;
@@ -635,6 +684,7 @@
 
     hr {
         width: 100%;
+        flex: 0 0 auto;
         border: none;
         border-top: 1px solid #ddd;
         margin: 2px 0;
@@ -650,11 +700,14 @@
             opacity: 0.4;
         }
     }
+
+    .toolbar.horizontal .tool-wrapper {
+        width: auto;
+        flex: 0 0 auto;
+    }
     
     .tool-menu {
-        position: absolute;
-        top: 0;
-        left: calc(100% + 10px);
+        position: fixed;
         background: #ffffff;
         border-radius: 12px;
         box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
@@ -663,6 +716,10 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        box-sizing: border-box;
+        width: min(390px, calc(100vw - 16px));
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
         cursor: default;
         user-select: none;
     }
@@ -681,11 +738,12 @@
     
     .tool-menu-grid {
         display: grid;
-        grid-auto-flow: column;
-        grid-template-rows: repeat(6, 62px);
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        grid-auto-flow: row;
         gap: 6px;
         padding: 8px;
-        overflow-x: auto;
+        overflow-y: auto;
+        max-height: calc(100vh - 68px);
     }
     
     .tool-grid-item {
@@ -693,8 +751,9 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        width: 80px;
         height: 62px;
+        width: 100%;
+        min-width: 0;
         padding: 4px 6px;
         border-radius: 8px;
         background: #f8f9fa;
@@ -778,6 +837,8 @@
         padding: 4px;
         z-index: 2001;
         min-width: 120px;
+        max-width: calc(100vw - 16px);
+        box-sizing: border-box;
     }
 
     .context-menu-item {
@@ -791,6 +852,23 @@
 
         &:hover {
             background-color: #f8d7da;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .toolbar {
+            gap: 4px;
+            padding: 4px;
+        }
+
+        .toolbar.horizontal hr {
+            margin: 0 2px;
+        }
+
+        button {
+            width: 34px;
+            height: 34px;
+            flex-basis: 34px;
         }
     }
 </style>

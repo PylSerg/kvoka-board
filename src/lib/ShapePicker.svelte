@@ -1,6 +1,7 @@
 <script>
     import { onMount, tick } from "svelte";
     import { brushSettings } from "$lib";
+    import { getViewportPopupStyle } from "./popupPosition.js";
 
     let {
         isVertical = true,
@@ -11,8 +12,9 @@
     } = $props();
 
     let isOpen = $state(false);
-    let pickerElement;
-    let popupStyle = $state("top: 0; left: calc(100% + 12px); right: auto; bottom: auto;");
+    let pickerElement = $state();
+    let popupElement = $state();
+    let popupStyle = $state("position: fixed; left: 8px; top: 8px;");
 
     // Helper for creating simple SVGs
     const iconBase = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
@@ -78,29 +80,20 @@
         };
 
         window.addEventListener("pointerdown", handleOutsideClick);
-        return () => window.removeEventListener("pointerdown", handleOutsideClick);
+        const handleResize = () => {
+            if (isOpen) computePopupStyle();
+        };
+        window.addEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("pointerdown", handleOutsideClick);
+            window.removeEventListener("resize", handleResize);
+        };
     });
 
     async function computePopupStyle() {
         await tick();
-        if (!pickerElement) return;
-        const rect = pickerElement.getBoundingClientRect();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-
-        if (isVertical) {
-            if (rect.left < vw / 2) {
-                popupStyle = "top: 0; bottom: auto; left: calc(100% + 12px); right: auto;";
-            } else {
-                popupStyle = "top: 0; bottom: auto; right: calc(100% + 12px); left: auto;";
-            }
-        } else {
-            if (rect.top < vh / 2) {
-                popupStyle = "top: calc(100% + 12px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);";
-            } else {
-                popupStyle = "bottom: calc(100% + 12px); top: auto; left: 50%; right: auto; transform: translateX(-50%);";
-            }
-        }
+        if (!pickerElement || !popupElement) return;
+        popupStyle = getViewportPopupStyle(pickerElement, popupElement, isVertical);
     }
 
     function togglePopup() {
@@ -159,7 +152,7 @@
 
     {#if isOpen}
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
+        <div bind:this={popupElement} class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
             {#each categories as category}
                 <div class="section-title">{category.title}</div>
                 <div class="shape-grid">
@@ -257,6 +250,9 @@
         padding: 12px;
         z-index: 1010;
         width: 170px;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        box-sizing: border-box;
         border: 1px solid #eee;
         display: flex;
         flex-direction: column;

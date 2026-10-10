@@ -1497,6 +1497,32 @@
         }
     }
 
+    function getAspectPreservingImageBounds(minX, minY, maxX, maxY, handle, aspect, originalBB) {
+        const safeAspect = aspect > 0 ? aspect : 1;
+        const anchorX = handle.includes("w") ? originalBB.maxX : originalBB.minX;
+        const anchorY = handle.includes("n") ? originalBB.maxY : originalBB.minY;
+        const pointerX = handle.includes("w") ? minX : maxX;
+        const pointerY = handle.includes("n") ? minY : maxY;
+
+        const pointerWidth = Math.max(1, Math.abs(pointerX - anchorX));
+        const pointerHeight = Math.max(1, Math.abs(pointerY - anchorY));
+        let width = pointerWidth;
+        let height = pointerHeight;
+
+        if (pointerWidth / pointerHeight > safeAspect) {
+            height = width / safeAspect;
+        } else {
+            width = height * safeAspect;
+        }
+
+        return {
+            minX: handle.includes("w") ? anchorX - width : anchorX,
+            maxX: handle.includes("w") ? anchorX : anchorX + width,
+            minY: handle.includes("n") ? anchorY - height : anchorY,
+            maxY: handle.includes("n") ? anchorY : anchorY + height,
+        };
+    }
+
     function handlePointerMove(e) {
         if (activePointers.has(e.pointerId)) {
             activePointers.set(e.pointerId, e);
@@ -1729,7 +1755,25 @@
                         let finalMaxX = newMaxX;
                         let finalMinY = newMinY;
                         let finalMaxY = newMaxY;
-                        if (e.shiftKey && resizeOriginalBB) {
+                        const isCornerHandle = ["nw", "ne", "se", "sw"].includes(activeResizeHandle);
+                        if (isCornerHandle && resizeOriginalBB) {
+                            const origW = resizeOriginalBB.maxX - resizeOriginalBB.minX;
+                            const origH = resizeOriginalBB.maxY - resizeOriginalBB.minY;
+                            const aspect = origH === 0 ? 1 : origW / origH;
+                            const aspectBounds = getAspectPreservingImageBounds(
+                                newMinX,
+                                newMinY,
+                                newMaxX,
+                                newMaxY,
+                                activeResizeHandle,
+                                aspect,
+                                resizeOriginalBB,
+                            );
+                            finalMinX = aspectBounds.minX;
+                            finalMaxX = aspectBounds.maxX;
+                            finalMinY = aspectBounds.minY;
+                            finalMaxY = aspectBounds.maxY;
+                        } else if (e.shiftKey && resizeOriginalBB) {
                             const origW = resizeOriginalBB.maxX - resizeOriginalBB.minX;
                             const origH = resizeOriginalBB.maxY - resizeOriginalBB.minY;
                             if (origW > 0 && origH > 0) {
@@ -2258,14 +2302,12 @@
         {@const imgBB = getBoundingBox(selectedImgLine)}
         {@const screenTopCenter = toScreen((imgBB.minX + imgBB.maxX) / 2, imgBB.minY)}
         {@const screenBottomCenter = toScreen((imgBB.minX + imgBB.maxX) / 2, imgBB.maxY)}
-        {@const toolbarPos = {
-            x: Math.max(220, Math.min(window.innerWidth - 220, screenTopCenter.x)),
-            y: screenTopCenter.y < 70 ? screenBottomCenter.y + 16 : screenTopCenter.y - 56,
-        }}
+        {@const toolbarTop = screenTopCenter.y < 70 ? screenBottomCenter.y + 16 : screenTopCenter.y - 56}
+        {@const toolbarY = Math.max(8, Math.min(window.innerHeight - 56, toolbarTop))}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
             class="image-edit-toolbar"
-            style="left: {toolbarPos.x}px; top: {toolbarPos.y}px;"
+            style="left: 50%; top: {toolbarY}px;"
             onpointerdown={(e) => e.stopPropagation()}
             role="toolbar"
             tabindex="-1"
@@ -2458,10 +2500,21 @@
         padding: 5px 10px;
         display: flex;
         align-items: center;
+        flex-wrap: nowrap;
         gap: 5px;
         z-index: 10001;
         animation: fadeInToolbar 0.15s ease-out;
         user-select: none;
+        box-sizing: border-box;
+        width: max-content;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+        white-space: nowrap;
+        touch-action: pan-x;
     }
 
     @keyframes fadeInToolbar {
@@ -2473,6 +2526,7 @@
         display: flex;
         align-items: center;
         gap: 6px;
+        flex: 0 0 auto;
     }
 
     .img-tool-icon {
@@ -2502,6 +2556,7 @@
         justify-content: center;
         width: 30px;
         height: 30px;
+        flex: 0 0 30px;
         background: transparent;
         border: none;
         border-radius: 6px;
@@ -2532,12 +2587,14 @@
     .img-toolbar-divider {
         width: 1px;
         height: 20px;
+        flex: 0 0 1px;
         background: rgba(0, 0, 0, 0.08);
         margin: 0 2px;
     }
 
     .img-filter-group {
         display: flex;
+        flex: 0 0 auto;
         background: #f0f2f5;
         border-radius: 6px;
         padding: 2px;

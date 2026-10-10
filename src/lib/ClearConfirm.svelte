@@ -1,6 +1,7 @@
 <script>
     import { onMount, tick } from "svelte";
     import clearIcon from "$lib/assets/broom.png";
+    import { getViewportPopupStyle } from "./popupPosition.js";
 
     let {
         onConfirm,
@@ -8,8 +9,9 @@
     } = $props();
 
     let isOpen = $state(false);
-    let containerElement;
-    let popupStyle = $state("top: 0; left: calc(100% + 12px); right: auto; bottom: auto;");
+    let containerElement = $state();
+    let popupElement = $state();
+    let popupStyle = $state("position: fixed; left: 8px; top: 8px;");
 
     onMount(() => {
         const handleOutsideClick = (e) => {
@@ -19,29 +21,20 @@
         };
 
         window.addEventListener("pointerdown", handleOutsideClick);
-        return () => window.removeEventListener("pointerdown", handleOutsideClick);
+        const handleResize = () => {
+            if (isOpen) computePopupStyle();
+        };
+        window.addEventListener("resize", handleResize);
+        return () => {
+            window.removeEventListener("pointerdown", handleOutsideClick);
+            window.removeEventListener("resize", handleResize);
+        };
     });
 
     async function computePopupStyle() {
         await tick();
-        if (!containerElement) return;
-        const rect = containerElement.getBoundingClientRect();
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-
-        if (isVertical) {
-            if (rect.left < vw / 2) {
-                popupStyle = "top: 0; bottom: auto; left: calc(100% + 12px); right: auto;";
-            } else {
-                popupStyle = "top: 0; bottom: auto; right: calc(100% + 12px); left: auto;";
-            }
-        } else {
-            if (rect.top < vh / 2) {
-                popupStyle = "top: calc(100% + 12px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%);";
-            } else {
-                popupStyle = "bottom: calc(100% + 12px); top: auto; left: 50%; right: auto; transform: translateX(-50%);";
-            }
-        }
+        if (!containerElement || !popupElement) return;
+        popupStyle = getViewportPopupStyle(containerElement, popupElement, isVertical);
     }
 
     function togglePopup() {
@@ -70,7 +63,7 @@
 
     {#if isOpen}
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
+        <div bind:this={popupElement} class="popup" style={popupStyle} onpointerdown={(e) => e.stopPropagation()}>
             <div class="popup-text">Очистити дошку?</div>
             <div class="popup-actions">
                 <button class="confirm-btn" onclick={handleConfirm}>Так</button>
@@ -136,6 +129,10 @@
         flex-direction: column;
         gap: 12px;
         min-width: 160px;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        box-sizing: border-box;
+        overflow: auto;
         
         .popup-text {
             font-size: 14px;

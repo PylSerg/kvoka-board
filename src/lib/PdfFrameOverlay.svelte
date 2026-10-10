@@ -181,10 +181,12 @@
         e.preventDefault();
         e.stopPropagation();
         selectedFrameId = frame.id;
+        const menuWidth = 160;
+        const menuHeight = 84;
         contextMenu = {
             show: true,
-            x: e.clientX,
-            y: e.clientY,
+            x: Math.max(8, Math.min(window.innerWidth - menuWidth - 8, e.clientX)),
+            y: Math.max(8, Math.min(window.innerHeight - menuHeight - 8, e.clientY)),
             frameId: frame.id
         };
     }
@@ -444,6 +446,8 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
         padding: 5px;
         min-width: 130px;
+        max-width: calc(100vw - 16px);
+        box-sizing: border-box;
         z-index: 2000;
         display: flex;
         flex-direction: column;

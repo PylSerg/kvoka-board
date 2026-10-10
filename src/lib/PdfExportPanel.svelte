@@ -2,6 +2,7 @@
     import { boardData, imageCache } from "$lib";
 
     let isGenerating = $state(false);
+    let isCollapsed = $state(false);
 
     function addVerticalFrame() {
         const screenCenterX = window.innerWidth / 2;
@@ -58,6 +59,10 @@
     function cancel() {
         boardData.isPdfMode = false;
         boardData.pdfFrames = [];
+    }
+
+    function toggleCollapse() {
+        isCollapsed = !isCollapsed;
     }
 
     function renderFrameToDataUrl(frame) {
@@ -213,8 +218,9 @@
     }
 </script>
 
-<div class="pdf-panel">
+<div class="pdf-panel" class:collapsed={isCollapsed}>
     <div class="panel-title">Режим PDF фреймів</div>
+    {#if !isCollapsed}
     <div class="divider"></div>
     
     <button
@@ -229,7 +235,7 @@
         </svg>
         <span>+ Вертикальний А4</span>
     </button>
-    
+
     <button
         onclick={addHorizontalFrame}
         class="panel-btn action"
@@ -263,6 +269,25 @@
             <span>Експортувати в PDF</span>
         {/if}
     </button>
+
+    {/if}
+
+    <button
+        onclick={toggleCollapse}
+        class="panel-btn collapse-btn"
+        title={isCollapsed ? "Розгорнути панель" : "Згорнути панель"}
+        aria-label={isCollapsed ? "Розгорнути панель" : "Згорнути панель"}
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            {#if isCollapsed}
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            {:else}
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            {/if}
+        </svg>
+        <span>{isCollapsed ? "Розгорнути" : "Згорнути"}</span>
+    </button>
     
     <button
         onclick={cancel}
@@ -293,9 +318,15 @@
         padding: 10px 20px;
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 12px;
         z-index: 1002;
         animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: max-content;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 16px);
+        box-sizing: border-box;
+        overflow: auto;
     }
 
     @keyframes slideUp {
@@ -315,6 +346,7 @@
         color: #333;
         margin-right: 4px;
         white-space: nowrap;
+        flex: 0 1 auto;
     }
 
     .divider {
@@ -336,6 +368,8 @@
         cursor: pointer;
         transition: all 0.2s ease;
         white-space: nowrap;
+        box-sizing: border-box;
+        flex: 0 1 auto;
     }
 
     .panel-btn.action {
@@ -373,6 +407,17 @@
         transform: translateY(-1px);
     }
 
+    .collapse-btn {
+        background: #eef5ff;
+        border-color: #d7e7ff;
+        color: #1769aa;
+    }
+
+    .collapse-btn:hover:not(:disabled) {
+        background: #dcecff;
+        transform: translateY(-1px);
+    }
+
     .panel-btn:active {
         transform: scale(0.98) !important;
     }
@@ -395,5 +440,32 @@
 
     @keyframes spin {
         to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 700px) {
+        .pdf-panel {
+            bottom: 8px;
+            padding: 10px;
+            width: calc(100vw - 16px);
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        .panel-title {
+            white-space: normal;
+            text-align: center;
+        }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            margin: 0;
+        }
+
+        .panel-btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
