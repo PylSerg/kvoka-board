@@ -40,7 +40,6 @@
 
     // Позиція меню
     let showMenu = $state(false);
-    let menuPos = $state({ x: 0, y: 0 });
 
     let offscreenCanvas;
     let offscreenCtx;
@@ -863,6 +862,73 @@
             });
             return { minX, minY, maxX, maxY };
         }
+    }
+
+    function getSelectedBoundingBox() {
+        const selectedLines = boardData.lines.filter((line) =>
+            boardData.selectedLineIds.includes(line.id),
+        );
+
+        if (selectedLines.length === 0) return null;
+
+        return selectedLines.reduce((bounds, line) => {
+            const lineBounds = getBoundingBox(line);
+            return {
+                minX: Math.min(bounds.minX, lineBounds.minX),
+                minY: Math.min(bounds.minY, lineBounds.minY),
+                maxX: Math.max(bounds.maxX, lineBounds.maxX),
+                maxY: Math.max(bounds.maxY, lineBounds.maxY),
+            };
+        }, {
+            minX: Infinity,
+            minY: Infinity,
+            maxX: -Infinity,
+            maxY: -Infinity,
+        });
+    }
+
+    function getSelectionMenuPosition() {
+        if (typeof window === "undefined") return null;
+
+        const selectedBounds = getSelectedBoundingBox();
+        if (!selectedBounds) return null;
+
+        const topCenter = toScreen(
+            (selectedBounds.minX + selectedBounds.maxX) / 2,
+            selectedBounds.minY,
+        );
+        const bottomCenter = toScreen(
+            (selectedBounds.minX + selectedBounds.maxX) / 2,
+            selectedBounds.maxY,
+        );
+        const buttonRadius = 20;
+        const gap = 10;
+        const menuWidth = 170;
+        const menuHeight = 150;
+        const canPlaceAbove = topCenter.y >= buttonRadius * 2 + gap + 8;
+        const buttonX = Math.max(
+            buttonRadius + 8,
+            Math.min(window.innerWidth - buttonRadius - 8, topCenter.x),
+        );
+        const buttonY = canPlaceAbove
+            ? topCenter.y - buttonRadius - gap
+            : bottomCenter.y + buttonRadius + gap;
+        const menuX = Math.max(
+            8,
+            Math.min(
+                window.innerWidth - menuWidth - 8,
+                buttonX + buttonRadius + gap,
+            ),
+        );
+        const menuY = Math.max(
+            8,
+            Math.min(
+                window.innerHeight - menuHeight - 8,
+                buttonY - menuHeight / 2,
+            ),
+        );
+
+        return { buttonX, buttonY, menuX, menuY };
     }
 
     function getResizeHandles(bb) {
@@ -1734,10 +1800,6 @@
             redraw();
         }
 
-        const wasSelecting = isSelectingArea;
-        const wasMoving = isMoving;
-        const wasResizing = isResizing;
-
         isDrawing = false;
         isMoving = false;
         isPanning = false;
@@ -1748,19 +1810,6 @@
         resizeOriginalLine = null;
         resizeOriginalBB = null;
 
-        // Показуємо меню тільки якщо ми завершили виділення (рамкою або кліком)
-        // і при цьому НЕ переміщували об'єкти (щоб меню не "стрибало" після кожного перетягування)
-        if (
-            boardData.selectedLineIds.length > 0 &&
-            !isCopying &&
-            !textInputState.active &&
-            (wasSelecting ||
-                (wasMoving && !showMenu) ||
-                (wasResizing && !showMenu))
-        ) {
-            showMenu = true;
-            menuPos = { x: e.clientX, y: e.clientY };
-        }
     }
 
     function handleDblClick(e) {
@@ -2033,21 +2082,33 @@
     ></div>
 {/if}
 
-{#if showMenu && !isCopying}
-    {@const selectedLine = boardData.lines.find(
-        (l) => l.id === boardData.selectedLineIds[0],
-    )}
-    <SelectionMenu
-        x={menuPos.x}
-        y={menuPos.y}
-        onCopy={handleCopy}
-        onDelete={handleDelete}
-        isText={boardData.selectedLineIds.length === 1 &&
-            selectedLine?.tool === "text"}
-        onEdit={() => {
-            if (selectedLine) openTextEdit(selectedLine);
-        }}
-    />
+{#if boardData.selectedLineIds.length > 0 &&
+    brushSettings.tool === "select" &&
+    !isMoving &&
+    !isResizing &&
+    !isCopying &&
+    !textInputState.active}
+    {@const selectionMenuPosition = getSelectionMenuPosition()}
+    {#if selectionMenuPosition}
+        {@const selectedLine = boardData.lines.find(
+            (l) => l.id === boardData.selectedLineIds[0],
+        )}
+        <SelectionMenu
+            x={selectionMenuPosition.buttonX}
+            y={selectionMenuPosition.buttonY}
+            menuX={selectionMenuPosition.menuX}
+            menuY={selectionMenuPosition.menuY}
+            isOpen={showMenu}
+            onToggle={() => (showMenu = !showMenu)}
+            onCopy={handleCopy}
+            onDelete={handleDelete}
+            isText={boardData.selectedLineIds.length === 1 &&
+                selectedLine?.tool === "text"}
+            onEdit={() => {
+                if (selectedLine) openTextEdit(selectedLine);
+            }}
+        />
+    {/if}
 {/if}
 
 {#if textInputState.active}
