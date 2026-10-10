@@ -10,6 +10,14 @@
         onDelete,
         isText = false,
         onEdit,
+        onBringToFront,
+        onBringForward,
+        onSendBackward,
+        onSendToBack,
+        canBringToFront = true,
+        canBringForward = true,
+        canSendBackward = true,
+        canSendToBack = true,
     } = $props();
 </script>
 
@@ -59,6 +67,44 @@
         <button class="menu-item copy" onclick={onCopy}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
             Копіювати
+        </button>
+        <div class="divider"></div>
+        <div class="menu-section-label">Порядок шарів</div>
+        <button
+            class="menu-item layer-item"
+            onclick={onBringToFront}
+            disabled={!canBringToFront}
+            title="Перемістити об’єкт на передній план"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/></svg>
+            На передній план
+        </button>
+        <button
+            class="menu-item layer-item"
+            onclick={onBringForward}
+            disabled={!canBringForward}
+            title="Перемістити об’єкт на один шар вперед"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19 7-7-7-7"/><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            На один шар вперед
+        </button>
+        <button
+            class="menu-item layer-item"
+            onclick={onSendBackward}
+            disabled={!canSendBackward}
+            title="Перемістити об’єкт на один шар назад"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 5-7 7 7 7"/><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            На один шар назад
+        </button>
+        <button
+            class="menu-item layer-item"
+            onclick={onSendToBack}
+            disabled={!canSendToBack}
+            title="Перемістити об’єкт на задній план"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/><polygon points="12 2 2 7 12 12 22 7 12 2"/></svg>
+            На задній план
         </button>
         <div class="divider"></div>
         <button class="menu-item delete" onclick={onDelete}>
@@ -158,6 +204,35 @@
     .menu-item:hover svg {
         opacity: 1;
         stroke: #007bff;
+    }
+
+    .menu-item:disabled {
+        color: #a7adb5;
+        cursor: default;
+        opacity: 0.6;
+    }
+
+    .menu-item:disabled svg {
+        opacity: 0.55;
+    }
+
+    .menu-item:disabled:hover {
+        background: transparent;
+        color: #a7adb5;
+    }
+
+    .menu-item:disabled:hover svg {
+        opacity: 0.55;
+        stroke: currentColor;
+    }
+
+    .menu-section-label {
+        padding: 4px 12px 2px;
+        color: #727984;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
     }
 
     .menu-item.edit:hover {

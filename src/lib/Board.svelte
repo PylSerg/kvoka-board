@@ -903,8 +903,14 @@
         );
         const buttonRadius = 20;
         const gap = 10;
-        const menuWidth = 170;
-        const menuHeight = 150;
+        const menuWidth = 220;
+        const selectedLine = boardData.lines.find(
+            (line) => line.id === boardData.selectedLineIds[0],
+        );
+        const menuHeight = selectedLine?.tool === "text" &&
+            boardData.selectedLineIds.length === 1
+            ? 380
+            : 340;
         const canPlaceAbove = topCenter.y >= buttonRadius * 2 + gap + 8;
         const buttonX = Math.max(
             buttonRadius + 8,
@@ -1889,6 +1895,99 @@
         redraw();
     }
 
+    function getLayerAvailability() {
+        const selectedIds = new Set(boardData.selectedLineIds);
+        const lines = boardData.lines;
+        let canBringForward = false;
+        let canSendBackward = false;
+
+        lines.forEach((line, index) => {
+            if (!selectedIds.has(line.id)) return;
+
+            if (lines[index + 1] && !selectedIds.has(lines[index + 1].id)) {
+                canBringForward = true;
+            }
+            if (lines[index - 1] && !selectedIds.has(lines[index - 1].id)) {
+                canSendBackward = true;
+            }
+        });
+
+        return {
+            canBringToFront: canBringForward,
+            canBringForward,
+            canSendBackward,
+            canSendToBack: canSendBackward,
+        };
+    }
+
+    function reorderSelectedLines(direction) {
+        const selectedIds = new Set(boardData.selectedLineIds);
+        if (selectedIds.size === 0 || boardData.lines.length < 2) return;
+
+        const lines = boardData.lines;
+        let reorderedLines = [...lines];
+
+        if (direction === "front" || direction === "back") {
+            const selectedLines = lines.filter((line) => selectedIds.has(line.id));
+            const otherLines = lines.filter((line) => !selectedIds.has(line.id));
+            reorderedLines = direction === "front"
+                ? [...otherLines, ...selectedLines]
+                : [...selectedLines, ...otherLines];
+        } else if (direction === "forward") {
+            // Рухаємо виділену групу на один крок уперед, зберігаючи порядок об’єктів.
+            for (let index = reorderedLines.length - 2; index >= 0; index -= 1) {
+                if (
+                    selectedIds.has(reorderedLines[index].id) &&
+                    !selectedIds.has(reorderedLines[index + 1].id)
+                ) {
+                    [reorderedLines[index], reorderedLines[index + 1]] = [
+                        reorderedLines[index + 1],
+                        reorderedLines[index],
+                    ];
+                }
+            }
+        } else if (direction === "backward") {
+            // Рухаємо виділену групу на один крок назад, зберігаючи порядок об’єктів.
+            for (let index = 1; index < reorderedLines.length; index += 1) {
+                if (
+                    !selectedIds.has(reorderedLines[index - 1].id) &&
+                    selectedIds.has(reorderedLines[index].id)
+                ) {
+                    [reorderedLines[index - 1], reorderedLines[index]] = [
+                        reorderedLines[index],
+                        reorderedLines[index - 1],
+                    ];
+                }
+            }
+        }
+
+        const hasChanged = reorderedLines.some(
+            (line, index) => line.id !== lines[index].id,
+        );
+        if (!hasChanged) return;
+
+        saveState();
+        boardData.lines = reorderedLines;
+        showMenu = false;
+        redraw();
+    }
+
+    function bringSelectedToFront() {
+        reorderSelectedLines("front");
+    }
+
+    function bringSelectedForward() {
+        reorderSelectedLines("forward");
+    }
+
+    function sendSelectedBackward() {
+        reorderSelectedLines("backward");
+    }
+
+    function sendSelectedToBack() {
+        reorderSelectedLines("back");
+    }
+
     function updateSelectedImage(updater) {
         if (boardData.selectedLineIds.length !== 1) return;
         const id = boardData.selectedLineIds[0];
@@ -1974,23 +2073,11 @@
     }
 
     function bringSelectedImageToFront() {
-        if (boardData.selectedLineIds.length !== 1) return;
-        const id = boardData.selectedLineIds[0];
-        saveState();
-        const item = boardData.lines.find((l) => l.id === id);
-        if (!item) return;
-        boardData.lines = [...boardData.lines.filter((l) => l.id !== id), item];
-        redraw();
+        bringSelectedToFront();
     }
 
     function sendSelectedImageToBack() {
-        if (boardData.selectedLineIds.length !== 1) return;
-        const id = boardData.selectedLineIds[0];
-        saveState();
-        const item = boardData.lines.find((l) => l.id === id);
-        if (!item) return;
-        boardData.lines = [item, ...boardData.lines.filter((l) => l.id !== id)];
-        redraw();
+        sendSelectedToBack();
     }
 
     function replaceSelectedImage() {
@@ -2093,6 +2180,7 @@
         {@const selectedLine = boardData.lines.find(
             (l) => l.id === boardData.selectedLineIds[0],
         )}
+        {@const layerAvailability = getLayerAvailability()}
         <SelectionMenu
             x={selectionMenuPosition.buttonX}
             y={selectionMenuPosition.buttonY}
@@ -2107,6 +2195,14 @@
             onEdit={() => {
                 if (selectedLine) openTextEdit(selectedLine);
             }}
+            onBringToFront={bringSelectedToFront}
+            onBringForward={bringSelectedForward}
+            onSendBackward={sendSelectedBackward}
+            onSendToBack={sendSelectedToBack}
+            canBringToFront={layerAvailability.canBringToFront}
+            canBringForward={layerAvailability.canBringForward}
+            canSendBackward={layerAvailability.canSendBackward}
+            canSendToBack={layerAvailability.canSendToBack}
         />
     {/if}
 {/if}
